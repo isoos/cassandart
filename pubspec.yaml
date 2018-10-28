@@ -1,0 +1,14 @@
+name: cassandart
+description: Cassandra client (driver wire protocol: v4, CQL: 3.0).
+version: 0.0.1
+homepage: https://github.com/isoos/cassandart
+author: Istvan Soos <istvan.soos@gmail.com>
+
+environment:
+  sdk: '>=2.0.0 <3.0.0'
+
+#dependencies:
+#
+
+dev_dependencies:
+  test: ^1.0.0
