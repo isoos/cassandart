@@ -1,6 +1,6 @@
 part of 'cassandart_impl.dart';
 
-List<int> buildQuery({
+Uint8List buildQuery({
   @required String query,
   @required Consistency consistency,
   @required values,
@@ -31,7 +31,7 @@ List<int> buildQuery({
   } else if (values != null && values is Map) {
     bw.writeShort(values.length);
     values.forEach((k, v) {
-      bw.writeString(k);
+      bw.writeShortString(k);
       if (v == null) {
         bw.writeInt(-1);
       } else {
@@ -42,7 +42,7 @@ List<int> buildQuery({
     throw new StateError('Unknown values: $values');
   }
 
-  return bw;
+  return bw.toBytes();
 }
 
 int consistencyValue(Consistency value) {

@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:test/test.dart';
 
 import 'package:cassandart/cassandart.dart';
@@ -48,6 +50,39 @@ void main() {
 
       final page2 = await client.query('SELECT * FROM cassandart_test.simple');
       expect(page2.rows.length, 2);
+    });
+
+    test('types', () async {
+      await client.execute('CREATE TABLE cassandart_test.types '
+          '(id text PRIMARY KEY, text_col text, int_col int, bigint_col bigint, '
+          'bool_col boolean, blob_col blob, float_col float, double_col double)');
+      await client.execute(
+          'INSERT INTO cassandart_test.types '
+          '(id, text_col, int_col, bigint_col, bool_col, blob_col, float_col, double_col) VALUES '
+          '(:id, :text_col, :int_col, :bigint_col, :bool_col, :blob_col, :float_col, :double_col)',
+          values: {
+            'id': 'id',
+            'text_col': 'text abc 123',
+            'int_col': TypedValue.int32(234353),
+            'bigint_col': 573653345345,
+            'bool_col': true,
+            'blob_col': new Uint8List.fromList([0, 2, 4, 6, 8, 10]),
+            'float_col': TypedValue.float(-12.5),
+            'double_col': -1.25,
+          });
+      final page = await client.query(
+          'SELECT * FROM cassandart_test.types WHERE id = ?',
+          values: ['id']);
+      expect(page.rows.single.asMap(), {
+        'id': 'id',
+        'text_col': 'text abc 123',
+        'int_col': 234353,
+        'bigint_col': 573653345345,
+        'bool_col': true,
+        'blob_col': [0, 2, 4, 6, 8, 10],
+        'float_col': -12.5,
+        'double_col': -1.25,
+      });
     });
 
     test('drop keyspace', () async {

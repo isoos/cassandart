@@ -46,7 +46,7 @@ enum Consistency {
 }
 
 abstract class Authenticator {
-  Future<List<int>> respond(List<int> challenge);
+  Future<Uint8List> respond(Uint8List challenge);
 }
 
 class PasswordAuthenticator implements Authenticator {
@@ -55,12 +55,12 @@ class PasswordAuthenticator implements Authenticator {
   PasswordAuthenticator(this.username, this.password);
 
   @override
-  Future<List<int>> respond(List<int> challenge) async {
-    return new CombinedListView([
-      [0],
-      utf8.encode(username),
-      [0],
-      utf8.encode(password),
-    ]);
+  Future<Uint8List> respond(Uint8List challenge) async {
+    BytesBuilder build = new BytesBuilder(copy: false);
+    build.addByte(0);
+    build.add(utf8.encode(username));
+    build.addByte(0);
+    build.add(utf8.encode(password));
+    return _toUint8List(build.toBytes());
   }
 }

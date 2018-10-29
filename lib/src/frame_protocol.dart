@@ -32,17 +32,17 @@ class FrameProtocol {
   Future start(Authenticator authenticator) async {
     _responseSubscription = _responseStream.listen(_handleResponse);
     final rs = await send(Opcode.start,
-        new BodyWriter()..writeStringMap({'CQL_VERSION': '3.0.0'}));
+        (new BodyWriter()..writeStringMap({'CQL_VERSION': '3.0.0'})).toBytes());
     if (rs.opcode == Opcode.ready) {
       return;
     }
     if (rs.opcode == Opcode.authenticate) {
       final reader = new BodyReader(rs.body);
-      final className = reader.readString();
+      final className = reader.readShortString();
       if (className == 'org.apache.cassandra.auth.PasswordAuthenticator') {
         final payload = await authenticator.respond(null);
         final body = new BodyWriter()..writeBytes(payload);
-        final auth = await send(Opcode.authResponse, body);
+        final auth = await send(Opcode.authResponse, body.toBytes());
         _throwIfError(auth);
         if (auth.opcode == Opcode.authSuccess) {
           return;
@@ -56,7 +56,7 @@ class FrameProtocol {
 
   Stream<Frame> get events => _eventController.stream;
 
-  Future<Frame> send(int opcode, List<int> body) {
+  Future<Frame> send(int opcode, Uint8List body) {
     if (_responseSubscription == null) {
       throw new StateError('Connection is closed.');
     }
@@ -170,10 +170,10 @@ class ErrorResponse implements Exception {
 
   ErrorResponse(this.code, this.message);
 
-  factory ErrorResponse.parse(List<int> body) {
+  factory ErrorResponse.parse(Uint8List body) {
     final br = new BodyReader(body);
     final code = br.readInt();
-    final message = br.readString();
+    final message = br.readShortString();
     return new ErrorResponse(code, message);
   }
 
@@ -202,18 +202,18 @@ RowsPage _parseRowsBody(BodyReader br) {
   String globalKeyspace;
   String globalTable;
   if (hasGlobalTableSpec) {
-    globalKeyspace = br.readString();
-    globalTable = br.readString();
+    globalKeyspace = br.readShortString();
+    globalTable = br.readShortString();
   }
   final columns = <Column>[];
   for (int i = 0; i < columnsCount; i++) {
     String keyspace = globalKeyspace;
     String table = globalTable;
     if (!hasGlobalTableSpec) {
-      keyspace = br.readString();
-      table = br.readString();
+      keyspace = br.readShortString();
+      table = br.readShortString();
     }
-    String column = br.readString();
+    String column = br.readShortString();
     final valueType = _parseValueType(br);
     columns.add(new Column(keyspace, table, column, valueType));
   }
@@ -300,17 +300,21 @@ class DataType {
   final List<DataType> parameters;
 
   DataType._(this.dataClass, this.customTypeName, this.parameters);
+
+  const DataType.core(this.dataClass)
+      : customTypeName = null,
+        parameters = null;
 }
 
 DataType _parseValueType(BodyReader br) {
   final typeCode = br.readShort();
-  final valueClass = _dataClassMap[typeCode];
-  if (valueClass == null) {
+  final dataClass = _dataClassMap[typeCode];
+  if (dataClass == null) {
     throw new UnimplementedError('Unknown type code: $typeCode');
   }
-  switch (valueClass) {
+  switch (dataClass) {
     case DataClass.custom:
-      final customType = br.readString();
+      final customType = br.readShortString();
       return new DataType._(DataClass.custom, customType, null);
     case DataClass.ascii:
     case DataClass.bigint:
@@ -331,9 +335,9 @@ DataType _parseValueType(BodyReader br) {
     case DataClass.time:
     case DataClass.smallint:
     case DataClass.tinyint:
-      return new DataType._(valueClass, null, null);
+      return new DataType.core(dataClass);
     default:
-      throw new UnimplementedError('Unhandled valued class: $valueClass');
+      throw new UnimplementedError('Unhandled data class: $dataClass');
   }
 }
 
@@ -349,6 +353,7 @@ class Column {
 abstract class Row {
   List<Column> get columns;
   List get values;
+  Map<String, dynamic> asMap();
 }
 
 class _Row implements Row {
@@ -356,6 +361,14 @@ class _Row implements Row {
   final List values;
 
   _Row(this.columns, this.values);
+
+  Map<String, dynamic> asMap() {
+    final map = <String, dynamic>{};
+    for (int i = 0; i < columns.length; i++) {
+      map[columns[i].column] = values[i];
+    }
+    return map;
+  }
 }
 
 abstract class RowsPage {

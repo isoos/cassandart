@@ -9,4 +9,5 @@ export 'src/cassandart_impl.dart'
         DataType,
         PasswordAuthenticator,
         Row,
-        RowsPage;
+        RowsPage,
+        TypedValue;

@@ -9,7 +9,7 @@ class Frame {
   final bool hasWarning;
   final int streamId;
   final int opcode;
-  final List<int> body;
+  final Uint8List body;
 
   Frame({
     @required this.isRequest,
@@ -26,7 +26,7 @@ class Frame {
   bool get isResponse => !isRequest;
   int get length => body == null ? 0 : body.length;
 
-  List<int> toHeaderBytes() {
+  Uint8List toHeaderBytes() {
     final list = new Uint8List(9);
     final data = new ByteData.view(list.buffer);
     final flag = (isCompressed ? _compressedMask : 0x00) |
@@ -66,12 +66,18 @@ class FrameSink implements Sink<Frame> {
 }
 
 class _FrameStreamTransformer {
-  final _queue = new DoubleLinkedQueue<List<int>>();
+  final _queue = new DoubleLinkedQueue<Uint8List>();
 
   Stream<Frame> parseFrames(Stream<List<int>> input) {
     return input.transform(new StreamTransformer.fromHandlers(
       handleData: (List<int> data, EventSink<Frame> sink) {
-        _queue.add(data);
+        Uint8List bytes;
+        if (data is Uint8List) {
+          bytes = data;
+        } else {
+          bytes = new Uint8List.fromList(data);
+        }
+        _queue.add(bytes);
         for (; _emitFrame(sink);) {}
       },
     ));
@@ -79,8 +85,7 @@ class _FrameStreamTransformer {
 
   bool _emitFrame(EventSink<Frame> sink) {
     final combined = new CombinedListView(_queue.toList());
-    final combinedLength = combined.length;
-    if (combinedLength < 9) {
+    if (combined.length < 9) {
       return false;
     }
     final version = combined[0];
@@ -99,24 +104,24 @@ class _FrameStreamTransformer {
         combined[8];
 
     final totalLength = length + 9;
-    if (combinedLength < totalLength) {
+    if (combined.length < totalLength) {
       return false;
     }
 
-    final frameBuffer = <List<int>>[];
-    int missing = totalLength;
-    while (missing > 0) {
-      final list = _queue.removeFirst();
-      if (list.length <= missing) {
-        frameBuffer.add(list);
-        missing -= list.length;
+    final body = new Uint8List(length);
+    body.setRange(0, length, combined, 9);
+
+    int removeLength = totalLength;
+    while (removeLength > 0) {
+      final next = _queue.removeFirst();
+      if (next.length <= removeLength) {
+        removeLength -= next.length;
         continue;
       }
-      frameBuffer.add(new LimitListView(list, missing));
-      _queue.addFirst(new OffsetListView(list, missing));
+      final buffer = new Uint8List(next.length - removeLength);
+      buffer.setRange(0, buffer.length, next, removeLength);
+      _queue.addFirst(buffer);
     }
-
-    final body = new OffsetListView(new CombinedListView(frameBuffer), 9);
 
     sink.add(new Frame(
       isRequest: !isResponse,
