@@ -121,6 +121,7 @@ class _FrameStreamTransformer {
       final buffer = new Uint8List(next.length - removeLength);
       buffer.setRange(0, buffer.length, next, removeLength);
       _queue.addFirst(buffer);
+      removeLength = 0;
     }
 
     sink.add(new Frame(
