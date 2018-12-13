@@ -1,6 +1,6 @@
 part of 'cassandart_impl.dart';
 
-class Frame {
+class FrameHeader {
   final bool isRequest;
   final int protocolVersion;
   final bool isCompressed;
@@ -9,9 +9,9 @@ class Frame {
   final bool hasWarning;
   final int streamId;
   final int opcode;
-  final Uint8List body;
+  final int length;
 
-  Frame({
+  FrameHeader({
     @required this.isRequest,
     @required this.protocolVersion,
     @required this.isCompressed,
@@ -20,11 +20,10 @@ class Frame {
     @required this.hasWarning,
     @required this.streamId,
     @required this.opcode,
-    @required this.body,
+    @required this.length,
   });
 
   bool get isResponse => !isRequest;
-  int get length => body == null ? 0 : body.length;
 
   Uint8List toHeaderBytes() {
     final list = new Uint8List(9);
@@ -42,6 +41,16 @@ class Frame {
   }
 }
 
+class Frame {
+  final FrameHeader header;
+  final Uint8List body;
+
+  Frame(this.header, this.body);
+
+  int get opcode => header.opcode;
+  int get streamId => header.streamId;
+}
+
 Stream<Frame> parseFrames(Stream<List<int>> input) {
   return new _FrameStreamTransformer().parseFrames(input);
 }
@@ -53,7 +62,7 @@ class FrameSink implements Sink<Frame> {
 
   @override
   void add(Frame frame) {
-    _output.add(frame.toHeaderBytes());
+    _output.add(frame.header.toHeaderBytes());
     if (frame.body != null && frame.body.isNotEmpty) {
       _output.add(frame.body);
     }
@@ -66,75 +75,61 @@ class FrameSink implements Sink<Frame> {
 }
 
 class _FrameStreamTransformer {
-  final _queue = new DoubleLinkedQueue<Uint8List>();
+  final _buffer = new ByteDataReader();
+  FrameHeader _header;
 
   Stream<Frame> parseFrames(Stream<List<int>> input) {
     return input.transform(new StreamTransformer.fromHandlers(
       handleData: (List<int> data, EventSink<Frame> sink) {
-        Uint8List bytes;
-        if (data is Uint8List) {
-          bytes = data;
-        } else {
-          bytes = new Uint8List.fromList(data);
-        }
-        _queue.add(bytes);
+        _buffer.add(data);
         for (; _emitFrame(sink);) {}
       },
     ));
   }
 
   bool _emitFrame(EventSink<Frame> sink) {
-    final combined = new CombinedListView(_queue.toList());
-    if (combined.length < 9) {
+    if (_header == null && _buffer.remainingLength < 9) {
       return false;
     }
-    final version = combined[0];
-    final isResponse = (version & _responseMask) == _responseMask;
-    final protocolVersion = version & _protocolVersionMask;
-    final flags = combined[1];
-    final isCompressed = (flags & _compressedMask) == _compressedMask;
-    final requiresTracing = (flags & _tracingMask) == _tracingMask;
-    final hasCustomPayload = (flags & _customPayloadMask) == _customPayloadMask;
-    final hasWarning = (flags & _warningMask) == _warningMask;
-    final streamId = (combined[2] << 8) + combined[3];
-    final opcode = combined[4];
-    final length = (combined[5] << 24) +
-        (combined[6] << 16) +
-        (combined[7] << 8) +
-        combined[8];
+    if (_header == null) {
+      final headerBytes = _buffer.read(9);
+      final version = headerBytes[0];
+      final isResponse = (version & _responseMask) == _responseMask;
+      final protocolVersion = version & _protocolVersionMask;
+      final flags = headerBytes[1];
+      final isCompressed = (flags & _compressedMask) == _compressedMask;
+      final requiresTracing = (flags & _tracingMask) == _tracingMask;
+      final hasCustomPayload = (flags & _customPayloadMask) ==
+          _customPayloadMask;
+      final hasWarning = (flags & _warningMask) == _warningMask;
+      final streamId = (headerBytes[2] << 8) + headerBytes[3];
+      final opcode = headerBytes[4];
+      final length = (headerBytes[5] << 24) +
+          (headerBytes[6] << 16) +
+          (headerBytes[7] << 8) +
+          headerBytes[8];
 
-    final totalLength = length + 9;
-    if (combined.length < totalLength) {
+      _header = new FrameHeader(
+        isRequest: !isResponse,
+        protocolVersion: protocolVersion,
+        isCompressed: isCompressed,
+        requiresTracing: requiresTracing,
+        hasCustomPayload: hasCustomPayload,
+        hasWarning: hasWarning,
+        streamId: streamId,
+        opcode: opcode,
+        length: length,
+      );
+    }
+
+    if (_header != null && _buffer.remainingLength < _header.length) {
       return false;
     }
 
-    final body = new Uint8List(length);
-    body.setRange(0, length, combined, 9);
-
-    int removeLength = totalLength;
-    while (removeLength > 0) {
-      final next = _queue.removeFirst();
-      if (next.length <= removeLength) {
-        removeLength -= next.length;
-        continue;
-      }
-      final buffer = new Uint8List(next.length - removeLength);
-      buffer.setRange(0, buffer.length, next, removeLength);
-      _queue.addFirst(buffer);
-      removeLength = 0;
-    }
-
-    sink.add(new Frame(
-      isRequest: !isResponse,
-      protocolVersion: protocolVersion,
-      isCompressed: isCompressed,
-      requiresTracing: requiresTracing,
-      hasCustomPayload: hasCustomPayload,
-      hasWarning: hasWarning,
-      streamId: streamId,
-      opcode: opcode,
-      body: body,
-    ));
+    final Uint8List body = _header.length == 0 ? null : _buffer.read(_header.length);
+    final frame = new Frame(_header, body);
+    _header = null;
+    sink.add(frame);
     return true;
   }
 }

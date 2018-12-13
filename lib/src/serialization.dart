@@ -110,40 +110,34 @@ Uint8List encodeData(value) {
   }
 }
 
-class BodyWriter {
-  final _chunks = <Uint8List>[];
-
+class BodyWriter extends ByteDataWriter {
   void writeByte(int value) {
-    _chunks.add(new Uint8List.fromList([value]));
+    write(new Uint8List(1)..[0] = value);
   }
 
   void writeBytes(Uint8List value) {
-    writeInt(value.length);
-    _chunks.add(value);
+    writeNormalInt(value.length);
+    write(value);
   }
 
   void writeShort(int value) {
-    final data = new ByteData(2);
-    data.setInt16(0, value, Endian.big);
-    _chunks.add(new Uint8List.view(data.buffer));
+    writeInt16(value);
   }
 
-  void writeInt(int value) {
-    final data = new ByteData(4);
-    data.setInt32(0, value, Endian.big);
-    _chunks.add(new Uint8List.view(data.buffer));
+  void writeNormalInt(int value) {
+    writeInt32(value);
   }
 
   void writeShortString(String value) {
     final data = utf8.encode(value);
     writeShort(data.length);
-    _chunks.add(_toUint8List(data));
+    write(data);
   }
 
   void writeLongString(String value) {
     final data = utf8.encode(value);
-    writeInt(data.length);
-    _chunks.add(_toUint8List(data));
+    writeNormalInt(data.length);
+    write(data);
   }
 
   void writeStringMap(Map<String, String> map) {
@@ -153,50 +147,25 @@ class BodyWriter {
       writeShortString(v);
     });
   }
-
-  Uint8List toBytes() {
-    if (_chunks.isEmpty) {
-      return new Uint8List(0);
-    }
-    Uint8List result = _chunks[0];
-    for (int i = 1; i < _chunks.length; i++) {
-      final Uint8List next = _chunks[i];
-      result = _toUint8List(result + next);
-    }
-    return result;
-  }
 }
 
-class BodyReader {
-  final Uint8List _body;
-  final ByteData _data;
-  int _offset = 0;
-  BodyReader(this._body) : _data = new ByteData.view(_body.buffer);
-
-  List<int> readBytes() {
-    final length = readInt();
-    final offset = _offset;
-    _offset += length;
-    return new Uint8List.view(_body.buffer, offset, length);
+class BodyReader extends ByteDataReader {
+  BodyReader(Uint8List body) {
+    add(body);
   }
 
-  int readShort() {
-    final offset = _offset;
-    _offset += 2;
-    return _data.getUint16(offset, Endian.big);
+  List<int> parseBytes() {
+    final length = parseInt();
+    return read(length);
   }
 
-  int readInt() {
-    final offset = _offset;
-    _offset += 4;
-    return _data.getInt32(offset, Endian.big);
-  }
+  int parseShort() => readInt16();
 
-  String readShortString() {
-    final length = readShort();
-    final buffer = new Uint8List.view(_body.buffer, _offset, length);
-    final str = utf8.decode(buffer);
-    _offset += length;
-    return str;
+  int parseInt() => readInt32();
+
+  String parseShortString() {
+    final length = parseShort();
+    final buffer = read(length);
+    return utf8.decode(buffer);
   }
 }

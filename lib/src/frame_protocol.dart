@@ -38,7 +38,7 @@ class FrameProtocol {
     }
     if (rs.opcode == Opcode.authenticate) {
       final reader = new BodyReader(rs.body);
-      final className = reader.readShortString();
+      final className = reader.parseShortString();
       if (className == 'org.apache.cassandra.auth.PasswordAuthenticator') {
         final payload = await authenticator.respond(null);
         final body = new BodyWriter()..writeBytes(payload);
@@ -51,7 +51,8 @@ class FrameProtocol {
             'Unimplemented auth handler: ${auth.opcode}');
       }
     }
-    throw new UnimplementedError('Unimplemented opcode handler: ${rs.opcode}');
+    throw new UnimplementedError(
+        'Unimplemented opcode handler: ${rs.opcode}');
   }
 
   Stream<Frame> get events => _eventController.stream;
@@ -60,7 +61,7 @@ class FrameProtocol {
     if (_responseSubscription == null) {
       throw new StateError('Connection is closed.');
     }
-    final frame = new Frame(
+    final header = new FrameHeader(
       isRequest: true,
       protocolVersion: protocolVersion,
       isCompressed: false,
@@ -69,10 +70,11 @@ class FrameProtocol {
       hasWarning: false,
       streamId: _nextStreamId(),
       opcode: opcode,
-      body: body,
+      length: body == null ? 0: body.length,
     );
+    final frame = new Frame(header, body);
     final c = new Completer<Frame>();
-    _responseCompleters[frame.streamId] = c;
+    _responseCompleters[frame.header.streamId] = c;
     _requestSink.add(frame);
     return c.future;
   }
@@ -84,7 +86,7 @@ class FrameProtocol {
     _throwIfError(rs);
     if (rs.opcode == Opcode.result) {
       final br = new BodyReader(rs.body);
-      final int kind = br.readInt();
+      final int kind = br.parseInt();
       switch (kind) {
         case _ResultKind.void$:
           return;
@@ -110,7 +112,7 @@ class FrameProtocol {
     _throwIfError(rs);
     if (rs.opcode == Opcode.result) {
       final br = new BodyReader(rs.body);
-      final int kind = br.readInt();
+      final int kind = br.parseInt();
       switch (kind) {
         case _ResultKind.void$:
           throw new UnimplementedError('Result kind $kind not supported.');
@@ -172,8 +174,8 @@ class ErrorResponse implements Exception {
 
   factory ErrorResponse.parse(Uint8List body) {
     final br = new BodyReader(body);
-    final code = br.readInt();
-    final message = br.readShortString();
+    final code = br.parseInt();
+    final message = br.parseShortString();
     return new ErrorResponse(code, message);
   }
 
@@ -190,39 +192,39 @@ abstract class _ResultKind {
 }
 
 RowsPage _parseRowsBody(BodyReader br) {
-  final flags = br.readInt();
+  final flags = br.parseInt();
   final hasGlobalTableSpec = flags & 0x0001 != 0;
   final hasMorePages = flags & 0x0002 != 0;
   final hasNoMetadata = flags & 0x0004 != 0;
-  final columnsCount = br.readInt();
+  final columnsCount = br.parseInt();
   List<int> pagingState;
   if (hasMorePages) {
-    pagingState = br.readBytes();
+    pagingState = br.parseBytes();
   }
   String globalKeyspace;
   String globalTable;
   if (hasGlobalTableSpec) {
-    globalKeyspace = br.readShortString();
-    globalTable = br.readShortString();
+    globalKeyspace = br.parseShortString();
+    globalTable = br.parseShortString();
   }
   final columns = <Column>[];
   for (int i = 0; i < columnsCount; i++) {
     String keyspace = globalKeyspace;
     String table = globalTable;
     if (!hasGlobalTableSpec) {
-      keyspace = br.readShortString();
-      table = br.readShortString();
+      keyspace = br.parseShortString();
+      table = br.parseShortString();
     }
-    String column = br.readShortString();
+    String column = br.parseShortString();
     final valueType = _parseValueType(br);
     columns.add(new Column(keyspace, table, column, valueType));
   }
-  final rowsCount = br.readInt();
+  final rowsCount = br.parseInt();
   final rows = new List<_Row>(rowsCount);
   for (int i = 0; i < rowsCount; i++) {
     final values = new List(columnsCount);
     for (int j = 0; j < columnsCount; j++) {
-      final bytes = br.readBytes();
+      final bytes = br.parseBytes();
       values[j] = decodeData(columns[j].dataType, bytes);
     }
     rows[i] = new _Row(columns, values);
@@ -307,14 +309,14 @@ class DataType {
 }
 
 DataType _parseValueType(BodyReader br) {
-  final typeCode = br.readShort();
+  final typeCode = br.parseShort();
   final dataClass = _dataClassMap[typeCode];
   if (dataClass == null) {
     throw new UnimplementedError('Unknown type code: $typeCode');
   }
   switch (dataClass) {
     case DataClass.custom:
-      final customType = br.readShortString();
+      final customType = br.parseShortString();
       return new DataType._(DataClass.custom, customType, null);
     case DataClass.ascii:
     case DataClass.bigint:

@@ -23,7 +23,7 @@ Uint8List buildQuery({
     bw.writeShort(values.length);
     values.forEach((v) {
       if (v == null) {
-        bw.writeInt(-1);
+        bw.writeNormalInt(-1);
       } else {
         bw.writeBytes(encodeData(v));
       }
@@ -33,7 +33,7 @@ Uint8List buildQuery({
     values.forEach((k, v) {
       bw.writeShortString(k);
       if (v == null) {
-        bw.writeInt(-1);
+        bw.writeNormalInt(-1);
       } else {
         bw.writeBytes(encodeData(v));
       }
