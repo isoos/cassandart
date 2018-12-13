@@ -62,6 +62,6 @@ class PasswordAuthenticator implements Authenticator {
     build.add(utf8.encode(username));
     build.addByte(0);
     build.add(utf8.encode(password));
-    return _toUint8List(build.toBytes());
+    return castBytes(build.toBytes());
   }
 }

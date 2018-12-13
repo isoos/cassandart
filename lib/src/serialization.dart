@@ -4,14 +4,6 @@ ByteData _byteData(List<int> data) {
   return new ByteData.view(new Uint8List.fromList(data).buffer);
 }
 
-Uint8List _toUint8List(List<int> list) {
-  if (list is Uint8List) {
-    return list;
-  } else {
-    return new Uint8List.fromList(list);
-  }
-}
-
 class TypedValue<T> {
   final DataType type;
   final T value;
@@ -59,7 +51,7 @@ decodeData(DataType type, List<int> data) {
   }
 }
 
-Uint8List encodeString(String value) => _toUint8List(utf8.encode(value));
+Uint8List encodeString(String value) => castBytes(utf8.encode(value));
 
 Uint8List encodeBigint(int value) {
   final data = new ByteData(8);
@@ -89,7 +81,7 @@ Uint8List encodeData(value) {
     return value;
   } else if (value is TypedValue<int> &&
       value.type.dataClass == DataClass.tinyint) {
-    return _toUint8List([value.value]);
+    return castBytes([value.value]);
   } else if (value is TypedValue<int> &&
       value.type.dataClass == DataClass.smallint) {
     final data = new ByteData(2);
@@ -110,7 +102,7 @@ Uint8List encodeData(value) {
   }
 }
 
-class BodyWriter extends ByteDataWriter {
+class _BodyWriter extends ByteDataWriter {
   void writeByte(int value) {
     write(new Uint8List(1)..[0] = value);
   }
@@ -149,8 +141,8 @@ class BodyWriter extends ByteDataWriter {
   }
 }
 
-class BodyReader extends ByteDataReader {
-  BodyReader(Uint8List body) {
+class _BodyReader extends ByteDataReader {
+  _BodyReader(Uint8List body) {
     add(body);
   }
 

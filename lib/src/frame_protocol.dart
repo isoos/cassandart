@@ -31,17 +31,19 @@ class FrameProtocol {
 
   Future start(Authenticator authenticator) async {
     _responseSubscription = _responseStream.listen(_handleResponse);
-    final rs = await send(Opcode.start,
-        (new BodyWriter()..writeStringMap({'CQL_VERSION': '3.0.0'})).toBytes());
+    final rs = await send(
+        Opcode.start,
+        (new _BodyWriter()..writeStringMap({'CQL_VERSION': '3.0.0'}))
+            .toBytes());
     if (rs.opcode == Opcode.ready) {
       return;
     }
     if (rs.opcode == Opcode.authenticate) {
-      final reader = new BodyReader(rs.body);
+      final reader = new _BodyReader(rs.body);
       final className = reader.parseShortString();
       if (className == 'org.apache.cassandra.auth.PasswordAuthenticator') {
         final payload = await authenticator.respond(null);
-        final body = new BodyWriter()..writeBytes(payload);
+        final body = new _BodyWriter()..writeBytes(payload);
         final auth = await send(Opcode.authResponse, body.toBytes());
         _throwIfError(auth);
         if (auth.opcode == Opcode.authSuccess) {
@@ -51,8 +53,7 @@ class FrameProtocol {
             'Unimplemented auth handler: ${auth.opcode}');
       }
     }
-    throw new UnimplementedError(
-        'Unimplemented opcode handler: ${rs.opcode}');
+    throw new UnimplementedError('Unimplemented opcode handler: ${rs.opcode}');
   }
 
   Stream<Frame> get events => _eventController.stream;
@@ -70,7 +71,7 @@ class FrameProtocol {
       hasWarning: false,
       streamId: _nextStreamId(),
       opcode: opcode,
-      length: body == null ? 0: body.length,
+      length: body == null ? 0 : body.length,
     );
     final frame = new Frame(header, body);
     final c = new Completer<Frame>();
@@ -85,7 +86,7 @@ class FrameProtocol {
     final rs = await send(Opcode.query, body);
     _throwIfError(rs);
     if (rs.opcode == Opcode.result) {
-      final br = new BodyReader(rs.body);
+      final br = new _BodyReader(rs.body);
       final int kind = br.parseInt();
       switch (kind) {
         case _ResultKind.void$:
@@ -111,7 +112,7 @@ class FrameProtocol {
     final rs = await send(Opcode.query, body);
     _throwIfError(rs);
     if (rs.opcode == Opcode.result) {
-      final br = new BodyReader(rs.body);
+      final br = new _BodyReader(rs.body);
       final int kind = br.parseInt();
       switch (kind) {
         case _ResultKind.void$:
@@ -173,7 +174,7 @@ class ErrorResponse implements Exception {
   ErrorResponse(this.code, this.message);
 
   factory ErrorResponse.parse(Uint8List body) {
-    final br = new BodyReader(body);
+    final br = new _BodyReader(body);
     final code = br.parseInt();
     final message = br.parseShortString();
     return new ErrorResponse(code, message);
@@ -191,7 +192,7 @@ abstract class _ResultKind {
   static const int schemaChange = 0x0005;
 }
 
-RowsPage _parseRowsBody(BodyReader br) {
+RowsPage _parseRowsBody(_BodyReader br) {
   final flags = br.parseInt();
   final hasGlobalTableSpec = flags & 0x0001 != 0;
   final hasMorePages = flags & 0x0002 != 0;
@@ -308,7 +309,7 @@ class DataType {
         parameters = null;
 }
 
-DataType _parseValueType(BodyReader br) {
+DataType _parseValueType(_BodyReader br) {
   final typeCode = br.parseShort();
   final dataClass = _dataClassMap[typeCode];
   if (dataClass == null) {

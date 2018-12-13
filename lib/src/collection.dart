@@ -64,7 +64,7 @@ class OffsetListView<T> extends _ListView<T> {
   final int _offset;
   final int _length;
 
-  OffsetListView(this._list, this._offset) : _length =  _list.length - _offset;
+  OffsetListView(this._list, this._offset) : _length = _list.length - _offset;
 
   int get length => _length;
 

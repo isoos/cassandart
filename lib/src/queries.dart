@@ -6,7 +6,7 @@ Uint8List buildQuery({
   @required values,
 }) {
   consistency ??= Consistency.quorum;
-  final bw = new BodyWriter();
+  final bw = new _BodyWriter();
   bw.writeLongString(query);
   bw.writeShort(consistencyValue(consistency));
 

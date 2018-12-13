@@ -99,8 +99,8 @@ class _FrameStreamTransformer {
       final flags = headerBytes[1];
       final isCompressed = (flags & _compressedMask) == _compressedMask;
       final requiresTracing = (flags & _tracingMask) == _tracingMask;
-      final hasCustomPayload = (flags & _customPayloadMask) ==
-          _customPayloadMask;
+      final hasCustomPayload =
+          (flags & _customPayloadMask) == _customPayloadMask;
       final hasWarning = (flags & _warningMask) == _warningMask;
       final streamId = (headerBytes[2] << 8) + headerBytes[3];
       final opcode = headerBytes[4];
@@ -126,7 +126,8 @@ class _FrameStreamTransformer {
       return false;
     }
 
-    final Uint8List body = _header.length == 0 ? null : _buffer.read(_header.length);
+    final Uint8List body =
+        _header.length == 0 ? null : _buffer.read(_header.length);
     final frame = new Frame(_header, body);
     _header = null;
     sink.add(frame);
