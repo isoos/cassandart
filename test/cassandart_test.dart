@@ -6,11 +6,11 @@ import 'package:cassandart/cassandart.dart';
 
 void main() {
   group('A group of tests', () {
-    CassandraPool client;
+    Cluster client;
 
     setUpAll(() async {
-      client = await CassandraPool.connect(
-        hostPorts: ['localhost:9042'],
+      client = await Cluster.connect(
+        ['localhost:9042'],
         authenticator: new PasswordAuthenticator('cassandra', 'cassandra'),
       );
     });

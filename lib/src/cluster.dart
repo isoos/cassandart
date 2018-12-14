@@ -1,23 +1,27 @@
 part of 'cassandart_impl.dart';
 
-class CassandraPool implements CassandraClient {
+/// The entry point for connecting to a cluster of Cassandra nodes.
+class Cluster implements Client {
   final Authenticator _authenticator;
+  final Consistency _consistency;
   final _connections = <_Connection>[];
   int _connectionCursor = 0;
 
-  CassandraPool._(this._authenticator);
+  Cluster._(this._authenticator, this._consistency);
 
-  static Future<CassandraPool> connect({
-    @required List<String> hostPorts,
-    @required Authenticator authenticator,
+  static Future<Cluster> connect(
+    List<String> hostPorts, {
+    Authenticator authenticator,
+    Consistency consistency,
   }) async {
-    final client = new CassandraPool._(authenticator);
+    final client = new Cluster._(authenticator, consistency);
     for (String hostPort in hostPorts) {
       await client._connect(hostPort);
     }
     return client;
   }
 
+  /// Close all open connections in the cluster.
   Future close() async {
     while (_connections.isNotEmpty) {
       await _connections.removeLast().close();
@@ -31,6 +35,7 @@ class CassandraPool implements CassandraClient {
     /* List | Map */
     values,
   }) {
+    consistency ??= _consistency;
     return _withConnection(
         (c) => c._protocol.execute(query, consistency, values));
   }
@@ -44,6 +49,7 @@ class CassandraPool implements CassandraClient {
     int pageSize,
     Uint8List pagingState,
   }) {
+    consistency ??= _consistency;
     final q = new _Query(query, consistency, values, pageSize, pagingState);
     final body = buildQuery(
       query: query,
@@ -57,16 +63,13 @@ class CassandraPool implements CassandraClient {
 
   Future _connect(String hostPort) async {
     final c = await _Connection.open(
-      hostPort: hostPort,
+      hostPort,
       authenticator: _authenticator,
     );
     _connections.add(c);
   }
 
   Future<R> _withConnection<R>(Future<R> body(_Connection c)) async {
-    if (_connectionCursor >= _connections.length) {
-      _connectionCursor = 0;
-    }
     _connectionCursor++;
     if (_connectionCursor >= _connections.length) {
       _connectionCursor = 0;
@@ -82,8 +85,8 @@ class _Connection {
 
   _Connection._(this.hostPort, this._protocol);
 
-  static Future<_Connection> open({
-    @required String hostPort,
+  static Future<_Connection> open(
+    String hostPort, {
     @required Authenticator authenticator,
   }) async {
     final host = hostPort.split(':').first;

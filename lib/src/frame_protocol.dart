@@ -111,8 +111,7 @@ class FrameProtocol {
     throw new UnimplementedError('Unimplemented opcode handler: ${rs.opcode}');
   }
 
-  Future<RowsPage> query(
-      CassandraClient client, _Query q, Uint8List body) async {
+  Future<RowsPage> query(Client client, _Query q, Uint8List body) async {
     final rs = await send(Opcode.query, body);
     _throwIfError(rs);
     if (rs.opcode == Opcode.result) {
@@ -196,7 +195,7 @@ abstract class _ResultKind {
   static const int schemaChange = 0x0005;
 }
 
-RowsPage _parseRowsBody(CassandraClient client, _Query q, _BodyReader br) {
+RowsPage _parseRowsBody(Client client, _Query q, _BodyReader br) {
   final flags = br.parseInt();
   final hasGlobalTableSpec = flags & 0x0001 != 0;
   final hasMorePages = flags & 0x0002 != 0;
@@ -400,7 +399,7 @@ class _Query {
 }
 
 class _RowsPage extends Object with PageMixin<Row> implements RowsPage {
-  final CassandraClient _client;
+  final Client _client;
   final _Query _query;
 
   @override

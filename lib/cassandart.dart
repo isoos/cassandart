@@ -1,8 +1,8 @@
 export 'src/cassandart_impl.dart'
     show
         Authenticator,
-        CassandraClient,
-        CassandraPool,
+        Client,
+        Cluster,
         Column,
         Consistency,
         DataClass,
