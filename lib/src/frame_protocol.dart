@@ -229,7 +229,7 @@ RowsPage _parseRowsBody(Client client, _Query q, _BodyReader br) {
     final values = new List(columnsCount);
     for (int j = 0; j < columnsCount; j++) {
       final bytes = br.parseBytes();
-      values[j] = decodeData(columns[j].dataType, bytes);
+      values[j] = decodeData(columns[j].type, bytes);
     }
     rows[i] = new _Row(columns, values);
   }
@@ -237,7 +237,7 @@ RowsPage _parseRowsBody(Client client, _Query q, _BodyReader br) {
   return new _RowsPage(client, q, columns, rows, !hasMorePages, pagingState);
 }
 
-enum DataClass {
+enum RawType {
   custom,
   ascii,
   bigint,
@@ -265,36 +265,36 @@ enum DataClass {
   tuple,
 }
 
-const _dataClassMap = const <int, DataClass>{
-  0x0000: DataClass.custom,
-  0x0001: DataClass.ascii,
-  0x0002: DataClass.bigint,
-  0x0003: DataClass.blob,
-  0x0004: DataClass.boolean,
-  0x0005: DataClass.counter,
-  0x0006: DataClass.decimal,
-  0x0007: DataClass.double,
-  0x0008: DataClass.float,
-  0x0009: DataClass.int,
-  0x000B: DataClass.timestamp,
-  0x000C: DataClass.uuid,
-  0x000D: DataClass.varchar,
-  0x000E: DataClass.varint,
-  0x000F: DataClass.timeuuid,
-  0x0010: DataClass.inet,
-  0x0011: DataClass.date,
-  0x0012: DataClass.time,
-  0x0013: DataClass.smallint,
-  0x0014: DataClass.tinyint,
-  0x0020: DataClass.list,
-  0x0021: DataClass.map,
-  0x0022: DataClass.set,
-  0x0030: DataClass.udt,
-  0x0031: DataClass.tuple,
+const _rawTypeMap = const <int, RawType>{
+  0x0000: RawType.custom,
+  0x0001: RawType.ascii,
+  0x0002: RawType.bigint,
+  0x0003: RawType.blob,
+  0x0004: RawType.boolean,
+  0x0005: RawType.counter,
+  0x0006: RawType.decimal,
+  0x0007: RawType.double,
+  0x0008: RawType.float,
+  0x0009: RawType.int,
+  0x000B: RawType.timestamp,
+  0x000C: RawType.uuid,
+  0x000D: RawType.varchar,
+  0x000E: RawType.varint,
+  0x000F: RawType.timeuuid,
+  0x0010: RawType.inet,
+  0x0011: RawType.date,
+  0x0012: RawType.time,
+  0x0013: RawType.smallint,
+  0x0014: RawType.tinyint,
+  0x0020: RawType.list,
+  0x0021: RawType.map,
+  0x0022: RawType.set,
+  0x0030: RawType.udt,
+  0x0031: RawType.tuple,
 };
 
-class DataType {
-  final DataClass dataClass;
+class Type {
+  final RawType rawType;
 
   /// String description of custom type
   final String customTypeName;
@@ -303,47 +303,45 @@ class DataType {
   /// List, Set: one value
   /// Map: two values: key, value
   /// Tuples: N values
-  final List<DataType> parameters;
+  final List<Type> parameters;
 
-  DataType._(this.dataClass, this.customTypeName, this.parameters);
+  Type._(this.rawType, this.customTypeName, this.parameters);
 
-  const DataType.core(this.dataClass)
-      : customTypeName = null,
-        parameters = null;
+  const Type(this.rawType, [this.parameters]) : customTypeName = null;
 }
 
-DataType _parseValueType(_BodyReader br) {
+Type _parseValueType(_BodyReader br) {
   final typeCode = br.parseShort();
-  final dataClass = _dataClassMap[typeCode];
-  if (dataClass == null) {
+  final rawType = _rawTypeMap[typeCode];
+  if (rawType == null) {
     throw new UnimplementedError('Unknown type code: $typeCode');
   }
-  switch (dataClass) {
-    case DataClass.custom:
+  switch (rawType) {
+    case RawType.custom:
       final customType = br.parseShortString();
-      return new DataType._(DataClass.custom, customType, null);
-    case DataClass.ascii:
-    case DataClass.bigint:
-    case DataClass.blob:
-    case DataClass.boolean:
-    case DataClass.counter:
-    case DataClass.decimal:
-    case DataClass.double:
-    case DataClass.float:
-    case DataClass.int:
-    case DataClass.timestamp:
-    case DataClass.uuid:
-    case DataClass.varchar:
-    case DataClass.varint:
-    case DataClass.timeuuid:
-    case DataClass.inet:
-    case DataClass.date:
-    case DataClass.time:
-    case DataClass.smallint:
-    case DataClass.tinyint:
-      return new DataType.core(dataClass);
+      return new Type._(RawType.custom, customType, null);
+    case RawType.ascii:
+    case RawType.bigint:
+    case RawType.blob:
+    case RawType.boolean:
+    case RawType.counter:
+    case RawType.decimal:
+    case RawType.double:
+    case RawType.float:
+    case RawType.int:
+    case RawType.timestamp:
+    case RawType.uuid:
+    case RawType.varchar:
+    case RawType.varint:
+    case RawType.timeuuid:
+    case RawType.inet:
+    case RawType.date:
+    case RawType.time:
+    case RawType.smallint:
+    case RawType.tinyint:
+      return new Type(rawType);
     default:
-      throw new UnimplementedError('Unhandled data class: $dataClass');
+      throw new UnimplementedError('Unhandled raw type: $rawType');
   }
 }
 
@@ -351,9 +349,9 @@ class Column {
   final String keyspace;
   final String table;
   final String column;
-  final DataType dataType;
+  final Type type;
 
-  Column(this.keyspace, this.table, this.column, this.dataType);
+  Column(this.keyspace, this.table, this.column, this.type);
 }
 
 abstract class Row {

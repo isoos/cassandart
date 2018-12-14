@@ -5,6 +5,7 @@
   - `CassandraClient.close` removed, only `CassandraPool` needs it.
   - Renamed `CassandraClient` -> `Client`.
   - Renamed `CassandraPool` -> `Cluster` and updated `connect`.
+  - Renamed `DataClass` -> `RawType`, `DataType` -> `Type`, `TypedValue` -> `Value`.
 
 - Query result pagination. 
 

@@ -82,11 +82,11 @@ void main() {
           values: {
             'id': 'id',
             'text_col': 'text abc 123',
-            'int_col': TypedValue.int32(234353),
+            'int_col': Value.int32(234353),
             'bigint_col': 573653345345,
             'bool_col': true,
             'blob_col': new Uint8List.fromList([0, 2, 4, 6, 8, 10]),
-            'float_col': TypedValue.float(-12.5),
+            'float_col': Value.float(-12.5),
             'double_col': -1.25,
           });
       final page = await client.query(

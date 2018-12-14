@@ -4,50 +4,50 @@ ByteData _byteData(List<int> data) {
   return new ByteData.view(new Uint8List.fromList(data).buffer);
 }
 
-class TypedValue<T> {
-  final DataType type;
+class Value<T> {
+  final Type type;
   final T value;
 
-  TypedValue._(this.type, this.value);
+  Value._(this.type, this.value);
 
-  static TypedValue<int> int8(int value) =>
-      new TypedValue._(const DataType.core(DataClass.tinyint), value);
+  static Value<int> int8(int value) =>
+      new Value._(const Type(RawType.tinyint), value);
 
-  static TypedValue<int> int16(int value) =>
-      new TypedValue._(const DataType.core(DataClass.smallint), value);
+  static Value<int> int16(int value) =>
+      new Value._(const Type(RawType.smallint), value);
 
-  static TypedValue<int> int32(int value) =>
-      new TypedValue._(const DataType.core(DataClass.int), value);
+  static Value<int> int32(int value) =>
+      new Value._(const Type(RawType.int), value);
 
-  static TypedValue<double> float(double value) =>
-      new TypedValue._(const DataType.core(DataClass.float), value);
+  static Value<double> float(double value) =>
+      new Value._(const Type(RawType.float), value);
 }
 
-decodeData(DataType type, List<int> data) {
-  switch (type.dataClass) {
-    case DataClass.blob:
+decodeData(Type type, List<int> data) {
+  switch (type.rawType) {
+    case RawType.blob:
       return data;
-    case DataClass.boolean:
+    case RawType.boolean:
       return data[0] != 0;
-    case DataClass.ascii:
+    case RawType.ascii:
       return ascii.decode(data);
-    case DataClass.varchar:
+    case RawType.varchar:
       return utf8.decode(data);
-    case DataClass.bigint:
+    case RawType.bigint:
       return _byteData(data).getInt64(0, Endian.big);
-    case DataClass.int:
+    case RawType.int:
       return _byteData(data).getInt32(0, Endian.big);
-    case DataClass.smallint:
+    case RawType.smallint:
       return _byteData(data).getInt16(0, Endian.big);
-    case DataClass.tinyint:
+    case RawType.tinyint:
       return _byteData(data).getInt8(0);
-    case DataClass.float:
+    case RawType.float:
       return _byteData(data).getFloat32(0, Endian.big);
-    case DataClass.double:
+    case RawType.double:
       return _byteData(data).getFloat64(0, Endian.big);
     default:
       throw new UnimplementedError(
-          'Decode of ${type.dataClass} not implemented.');
+          'Decode of ${type.rawType} not implemented.');
   }
 }
 
@@ -79,21 +79,17 @@ Uint8List encodeData(value) {
     return value ? _boolTrue : _boolFalse;
   } else if (value is Uint8List) {
     return value;
-  } else if (value is TypedValue<int> &&
-      value.type.dataClass == DataClass.tinyint) {
+  } else if (value is Value<int> && value.type.rawType == RawType.tinyint) {
     return castBytes([value.value]);
-  } else if (value is TypedValue<int> &&
-      value.type.dataClass == DataClass.smallint) {
+  } else if (value is Value<int> && value.type.rawType == RawType.smallint) {
     final data = new ByteData(2);
     data.setInt16(0, value.value, Endian.big);
     return new Uint8List.view(data.buffer);
-  } else if (value is TypedValue<int> &&
-      value.type.dataClass == DataClass.int) {
+  } else if (value is Value<int> && value.type.rawType == RawType.int) {
     final data = new ByteData(4);
     data.setInt32(0, value.value, Endian.big);
     return new Uint8List.view(data.buffer);
-  } else if (value is TypedValue<double> &&
-      value.type.dataClass == DataClass.float) {
+  } else if (value is Value<double> && value.type.rawType == RawType.float) {
     final data = new ByteData(4);
     data.setFloat32(0, value.value, Endian.big);
     return new Uint8List.view(data.buffer);

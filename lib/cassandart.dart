@@ -5,9 +5,9 @@ export 'src/cassandart_impl.dart'
         Cluster,
         Column,
         Consistency,
-        DataClass,
-        DataType,
         PasswordAuthenticator,
+        RawType,
         Row,
         RowsPage,
-        TypedValue;
+        Type,
+        Value;
