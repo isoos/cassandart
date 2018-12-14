@@ -146,9 +146,9 @@ class _BodyReader extends ByteDataReader {
     add(body);
   }
 
-  List<int> parseBytes() {
+  Uint8List parseBytes({bool copy: false}) {
     final length = parseInt();
-    return read(length);
+    return read(length, copy: copy);
   }
 
   int parseShort() => readInt16();

@@ -42,9 +42,18 @@ class CassandraPool implements CassandraClient {
     Consistency consistency,
     /* List | Map */
     values,
+    int pageSize,
+    Uint8List pagingState,
   }) {
-    return _withConnection(
-        (c) => c._protocol.query(query, consistency, values));
+    final q = new _Query(query, consistency, values, pageSize, pagingState);
+    final body = buildQuery(
+      query: query,
+      consistency: consistency,
+      values: values,
+      resultPageSize: pageSize,
+      pagingState: pagingState,
+    );
+    return _withConnection((c) => c._protocol.query(this, q, body));
   }
 
   Future _connect(String hostPort) async {

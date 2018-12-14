@@ -81,8 +81,13 @@ class FrameProtocol {
   }
 
   Future execute(String query, Consistency consistency, values) async {
-    final body =
-        buildQuery(query: query, consistency: consistency, values: values);
+    final body = buildQuery(
+      query: query,
+      consistency: consistency,
+      values: values,
+      resultPageSize: null,
+      pagingState: null,
+    );
     final rs = await send(Opcode.query, body);
     _throwIfError(rs);
     if (rs.opcode == Opcode.result) {
@@ -106,9 +111,8 @@ class FrameProtocol {
     throw new UnimplementedError('Unimplemented opcode handler: ${rs.opcode}');
   }
 
-  Future<RowsPage> query(String query, Consistency consistency, values) async {
-    final body =
-        buildQuery(query: query, consistency: consistency, values: values);
+  Future<RowsPage> query(
+      CassandraClient client, _Query q, Uint8List body) async {
     final rs = await send(Opcode.query, body);
     _throwIfError(rs);
     if (rs.opcode == Opcode.result) {
@@ -118,7 +122,7 @@ class FrameProtocol {
         case _ResultKind.void$:
           throw new UnimplementedError('Result kind $kind not supported.');
         case _ResultKind.rows:
-          return _parseRowsBody(br);
+          return _parseRowsBody(client, q, br);
         case _ResultKind.setKeyspace:
           throw new UnimplementedError('Result kind $kind not supported.');
         case _ResultKind.prepared:
@@ -192,15 +196,15 @@ abstract class _ResultKind {
   static const int schemaChange = 0x0005;
 }
 
-RowsPage _parseRowsBody(_BodyReader br) {
+RowsPage _parseRowsBody(CassandraClient client, _Query q, _BodyReader br) {
   final flags = br.parseInt();
   final hasGlobalTableSpec = flags & 0x0001 != 0;
   final hasMorePages = flags & 0x0002 != 0;
   final hasNoMetadata = flags & 0x0004 != 0;
   final columnsCount = br.parseInt();
-  List<int> pagingState;
+  Uint8List pagingState;
   if (hasMorePages) {
-    pagingState = br.parseBytes();
+    pagingState = br.parseBytes(copy: true);
   }
   String globalKeyspace;
   String globalTable;
@@ -231,7 +235,7 @@ RowsPage _parseRowsBody(_BodyReader br) {
     rows[i] = new _Row(columns, values);
   }
 
-  return new _RowsPage(columns, rows, !hasMorePages);
+  return new _RowsPage(client, q, columns, rows, !hasMorePages, pagingState);
 }
 
 enum DataClass {
@@ -376,21 +380,54 @@ class _Row implements Row {
 
 abstract class RowsPage implements Page<Row> {
   List<Column> get columns;
+  Uint8List get pagingState;
+}
+
+class _Query {
+  final String query;
+  final Consistency consistency;
+  final values;
+  final int pageSize;
+  final Uint8List pagingState;
+
+  _Query(
+    this.query,
+    this.consistency,
+    this.values,
+    this.pageSize,
+    this.pagingState,
+  );
 }
 
 class _RowsPage extends Object with PageMixin<Row> implements RowsPage {
+  final CassandraClient _client;
+  final _Query _query;
+
   @override
   final List<Column> columns;
+
   @override
   final List<Row> items;
+
   @override
   final bool isLast;
 
-  _RowsPage(this.columns, this.items, this.isLast);
+  @override
+  final Uint8List pagingState;
+
+  _RowsPage(this._client, this._query, this.columns, this.items, this.isLast,
+      this.pagingState);
 
   @override
-  Future<RowsPage> next() {
-    throw new UnimplementedError();
+  Future<RowsPage> next() async {
+    if (isLast) return null;
+    return await _client.query(
+      _query.query,
+      consistency: _query.consistency,
+      values: _query.values,
+      pageSize: _query.pageSize,
+      pagingState: pagingState,
+    );
   }
 
   @override

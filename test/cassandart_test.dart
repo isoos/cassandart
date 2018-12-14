@@ -43,13 +43,27 @@ void main() {
           'INSERT INTO cassandart_test.simple (id, content) VALUES (:id, :content)',
           values: {'id': 'id-2', 'content': 'content-2'});
 
+      await client.execute(
+          'INSERT INTO cassandart_test.simple (id, content) VALUES (:id, :content)',
+          values: {'id': 'id-3', 'content': 'content-3'});
+
       final page1 = await client.query(
           'SELECT * FROM cassandart_test.simple WHERE id = ?',
           values: ['id-1']);
       expect(page1.items.single.values, ['id-1', 'content-1']);
 
       final page2 = await client.query('SELECT * FROM cassandart_test.simple');
-      expect(page2.items.length, 2);
+      expect(page2.items.length, 3);
+
+      final page3 = await client.query(
+        'SELECT * FROM cassandart_test.simple',
+        pageSize: 2,
+      );
+      expect(page3.items.length, 2);
+      expect(page3.isLast, false);
+      final page4 = await page3.next();
+      expect(page4.items.length, 1);
+      expect(page4.isLast, true);
     });
 
     test('types', () async {

@@ -4,8 +4,12 @@ Uint8List buildQuery({
   @required String query,
   @required Consistency consistency,
   @required values,
+  @required int resultPageSize,
+  @required Uint8List pagingState,
 }) {
   consistency ??= Consistency.quorum;
+  final hasResultPageSize = resultPageSize != null && resultPageSize > 0;
+
   final bw = new _BodyWriter();
   bw.writeLongString(query);
   bw.writeShort(consistencyValue(consistency));
@@ -16,6 +20,12 @@ Uint8List buildQuery({
     if (values is Map) {
       flag = flag | 0x40;
     }
+  }
+  if (hasResultPageSize) {
+    flag = flag | 0x04;
+  }
+  if (pagingState != null) {
+    flag = flag | 0x08;
   }
   bw.writeByte(flag);
 
@@ -40,6 +50,12 @@ Uint8List buildQuery({
     });
   } else if (values != null) {
     throw new StateError('Unknown values: $values');
+  }
+  if (hasResultPageSize) {
+    bw.writeNormalInt(resultPageSize);
+  }
+  if (pagingState != null) {
+    bw.writeBytes(pagingState);
   }
 
   return bw.toBytes();

@@ -28,6 +28,8 @@ abstract class CassandraClient {
     Consistency consistency,
     /* List | Map */
     values,
+    int pageSize,
+    Uint8List pagingState,
   });
 
   Future close();
