@@ -18,7 +18,6 @@ class CassandraPool implements CassandraClient {
     return client;
   }
 
-  @override
   Future close() async {
     while (_connections.isNotEmpty) {
       await _connections.removeLast().close();
@@ -50,7 +49,7 @@ class CassandraPool implements CassandraClient {
       query: query,
       consistency: consistency,
       values: values,
-      resultPageSize: pageSize,
+      pageSize: pageSize,
       pagingState: pagingState,
     );
     return _withConnection((c) => c._protocol.query(this, q, body));

@@ -8,7 +8,7 @@ import 'package:buffer/buffer.dart';
 import 'package:meta/meta.dart';
 import 'package:page/page.dart';
 
-part 'client.dart';
+part 'cassandra_pool.dart';
 part 'collection.dart';
 part 'frame_protocol.dart';
 part 'frames.dart';
@@ -19,20 +19,18 @@ abstract class CassandraClient {
   Future execute(
     String query, {
     Consistency consistency,
-    /* List | Map */
+    /* List<dynamic> | Map<String, dynamic> */
     values,
   });
 
   Future<RowsPage> query(
     String query, {
     Consistency consistency,
-    /* List | Map */
+    /* List<dynamic> | Map<String, dynamic> */
     values,
     int pageSize,
     Uint8List pagingState,
   });
-
-  Future close();
 }
 
 enum Consistency {

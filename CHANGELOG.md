@@ -1,6 +1,8 @@
-## 0.0.2
+## 0.1.0
 
-- *BREAKING CHANGE*: `PageRows` implements `Page<Row>` from `package:page`.
+- *BREAKING CHANGES*:
+  - `PageRows` implements `Page<Row>` from `package:page`.
+  - `CassandraClient.close` removed, only `CassandraPool` needs it.
 
 - Query result pagination. 
 

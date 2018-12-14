@@ -85,7 +85,7 @@ class FrameProtocol {
       query: query,
       consistency: consistency,
       values: values,
-      resultPageSize: null,
+      pageSize: null,
       pagingState: null,
     );
     final rs = await send(Opcode.query, body);
@@ -200,7 +200,7 @@ RowsPage _parseRowsBody(CassandraClient client, _Query q, _BodyReader br) {
   final flags = br.parseInt();
   final hasGlobalTableSpec = flags & 0x0001 != 0;
   final hasMorePages = flags & 0x0002 != 0;
-  final hasNoMetadata = flags & 0x0004 != 0;
+  // final hasNoMetadata = flags & 0x0004 != 0;
   final columnsCount = br.parseInt();
   Uint8List pagingState;
   if (hasMorePages) {
