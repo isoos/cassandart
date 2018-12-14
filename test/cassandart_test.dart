@@ -66,6 +66,11 @@ void main() {
       expect(page4.isLast, true);
     });
 
+    test('error in query', () async {
+      expect(() => client.query('SELEECT FROM cassandart_test.simple'),
+          throwsException);
+    });
+
     test('types', () async {
       await client.execute('CREATE TABLE cassandart_test.types '
           '(id text PRIMARY KEY, text_col text, int_col int, bigint_col bigint, '
