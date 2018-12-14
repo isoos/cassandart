@@ -21,8 +21,8 @@ void main() {
 
     test('query cluster name', () async {
       final page = await client.query('SELECT cluster_name FROM system.local');
-      expect(page.isLastPage, isTrue);
-      expect(page.rows.single.values, ['My Cluster']);
+      expect(page.isLast, isTrue);
+      expect(page.items.single.values, ['My Cluster']);
     });
 
     test('create keyspace', () async {
@@ -46,10 +46,10 @@ void main() {
       final page1 = await client.query(
           'SELECT * FROM cassandart_test.simple WHERE id = ?',
           values: ['id-1']);
-      expect(page1.rows.single.values, ['id-1', 'content-1']);
+      expect(page1.items.single.values, ['id-1', 'content-1']);
 
       final page2 = await client.query('SELECT * FROM cassandart_test.simple');
-      expect(page2.rows.length, 2);
+      expect(page2.items.length, 2);
     });
 
     test('types', () async {
@@ -73,7 +73,7 @@ void main() {
       final page = await client.query(
           'SELECT * FROM cassandart_test.types WHERE id = ?',
           values: ['id']);
-      expect(page.rows.single.asMap(), {
+      expect(page.items.single.asMap(), {
         'id': 'id',
         'text_col': 'text abc 123',
         'int_col': 234353,

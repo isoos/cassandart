@@ -6,6 +6,7 @@ import 'dart:typed_data';
 
 import 'package:buffer/buffer.dart';
 import 'package:meta/meta.dart';
+import 'package:page/page.dart';
 
 part 'client.dart';
 part 'collection.dart';

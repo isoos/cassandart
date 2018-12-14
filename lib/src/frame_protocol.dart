@@ -374,25 +374,25 @@ class _Row implements Row {
   }
 }
 
-abstract class RowsPage {
+abstract class RowsPage implements Page<Row> {
   List<Column> get columns;
-  List<Row> get rows;
-  bool get isLastPage;
-  Future<RowsPage> nextPage();
 }
 
-class _RowsPage implements RowsPage {
+class _RowsPage extends Object with PageMixin<Row> implements RowsPage {
   @override
   final List<Column> columns;
   @override
-  final List<Row> rows;
+  final List<Row> items;
   @override
-  final bool isLastPage;
+  final bool isLast;
 
-  _RowsPage(this.columns, this.rows, this.isLastPage);
+  _RowsPage(this.columns, this.items, this.isLast);
 
   @override
-  Future<RowsPage> nextPage() {
+  Future<RowsPage> next() {
     throw new UnimplementedError();
   }
+
+  @override
+  Future close() async {}
 }
