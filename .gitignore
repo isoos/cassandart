@@ -12,3 +12,7 @@ doc/api/
 
 # IDE
 *.iml
+.idea/
+lib/\.DS_Store
+
+\.DS_Store

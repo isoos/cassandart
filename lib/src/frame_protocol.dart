@@ -226,7 +226,8 @@ RowsPage _parseRowsBody(_BodyReader br) {
     final values = new List(columnsCount);
     for (int j = 0; j < columnsCount; j++) {
       final bytes = br.parseBytes();
-      values[j] = decodeData(columns[j].dataType, bytes);
+      values[j] = bytes == null ? null :
+          decodeData(columns[j].dataType, bytes);
     }
     rows[i] = new _Row(columns, values);
   }
