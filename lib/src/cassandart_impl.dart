@@ -65,7 +65,7 @@ class PasswordAuthenticator implements Authenticator {
 
   @override
   Future<Uint8List> respond(Uint8List challenge) async {
-    BytesBuilder build = new BytesBuilder(copy: false);
+    final build = BytesBuilder(copy: false);
     build.addByte(0);
     build.add(utf8.encode(username));
     build.addByte(0);

@@ -24,45 +24,42 @@ class FrameProtocol {
   final Sink<Frame> _requestSink;
   final Stream<Frame> _responseStream;
   final _responseCompleters = <int, Completer<Frame>>{};
-  final _eventController = new StreamController<Frame>();
+  final _eventController = StreamController<Frame>();
   StreamSubscription<Frame> _responseSubscription;
 
   FrameProtocol(this._requestSink, this._responseStream);
 
   Future start(Authenticator authenticator) async {
     _responseSubscription = _responseStream.listen(_handleResponse);
-    final rs = await send(
-        Opcode.start,
-        (new _BodyWriter()..writeStringMap({'CQL_VERSION': '3.0.0'}))
-            .toBytes());
+    final rs = await send(Opcode.start,
+        (_BodyWriter()..writeStringMap({'CQL_VERSION': '3.0.0'})).toBytes());
     if (rs.opcode == Opcode.ready) {
       return;
     }
     if (rs.opcode == Opcode.authenticate) {
-      final reader = new _BodyReader(rs.body);
+      final reader = _BodyReader(rs.body);
       final className = reader.parseShortString();
       if (className == 'org.apache.cassandra.auth.PasswordAuthenticator') {
         final payload = await authenticator.respond(null);
-        final body = new _BodyWriter()..writeBytes(payload);
+        final body = _BodyWriter()..writeBytes(payload);
         final auth = await send(Opcode.authResponse, body.toBytes());
         _throwIfError(auth);
         if (auth.opcode == Opcode.authSuccess) {
           return;
         }
-        throw new UnimplementedError(
-            'Unimplemented auth handler: ${auth.opcode}');
+        throw UnimplementedError('Unimplemented auth handler: ${auth.opcode}');
       }
     }
-    throw new UnimplementedError('Unimplemented opcode handler: ${rs.opcode}');
+    throw UnimplementedError('Unimplemented opcode handler: ${rs.opcode}');
   }
 
   Stream<Frame> get events => _eventController.stream;
 
   Future<Frame> send(int opcode, Uint8List body) {
     if (_responseSubscription == null) {
-      throw new StateError('Connection is closed.');
+      throw StateError('Connection is closed.');
     }
-    final header = new FrameHeader(
+    final header = FrameHeader(
       isRequest: true,
       protocolVersion: protocolVersion,
       isCompressed: false,
@@ -73,8 +70,8 @@ class FrameProtocol {
       opcode: opcode,
       length: body == null ? 0 : body.length,
     );
-    final frame = new Frame(header, body);
-    final c = new Completer<Frame>();
+    final frame = Frame(header, body);
+    final c = Completer<Frame>();
     _responseCompleters[frame.header.streamId] = c;
     _requestSink.add(frame);
     return c.future;
@@ -91,48 +88,48 @@ class FrameProtocol {
     final rs = await send(Opcode.query, body);
     _throwIfError(rs);
     if (rs.opcode == Opcode.result) {
-      final br = new _BodyReader(rs.body);
+      final br = _BodyReader(rs.body);
       final int kind = br.parseInt();
       switch (kind) {
         case _ResultKind.void$:
           return;
         case _ResultKind.rows:
-          throw new UnimplementedError('Result kind $kind not supported.');
+          throw UnimplementedError('Result kind $kind not supported.');
         case _ResultKind.setKeyspace:
           return;
         case _ResultKind.prepared:
-          throw new UnimplementedError('Result kind $kind not supported.');
+          throw UnimplementedError('Result kind $kind not supported.');
         case _ResultKind.schemaChange:
           return;
         default:
-          throw new UnimplementedError('Result kind $kind not implemented.');
+          throw UnimplementedError('Result kind $kind not implemented.');
       }
     }
-    throw new UnimplementedError('Unimplemented opcode handler: ${rs.opcode}');
+    throw UnimplementedError('Unimplemented opcode handler: ${rs.opcode}');
   }
 
   Future<ResultPage> query(Client client, _Query q, Uint8List body) async {
     final rs = await send(Opcode.query, body);
     _throwIfError(rs);
     if (rs.opcode == Opcode.result) {
-      final br = new _BodyReader(rs.body);
+      final br = _BodyReader(rs.body);
       final int kind = br.parseInt();
       switch (kind) {
         case _ResultKind.void$:
-          throw new UnimplementedError('Result kind $kind not supported.');
+          throw UnimplementedError('Result kind $kind not supported.');
         case _ResultKind.rows:
           return _parseRowsBody(client, q, br);
         case _ResultKind.setKeyspace:
-          throw new UnimplementedError('Result kind $kind not supported.');
+          throw UnimplementedError('Result kind $kind not supported.');
         case _ResultKind.prepared:
-          throw new UnimplementedError('Result kind $kind not supported.');
+          throw UnimplementedError('Result kind $kind not supported.');
         case _ResultKind.schemaChange:
-          throw new UnimplementedError('Result kind $kind not supported.');
+          throw UnimplementedError('Result kind $kind not supported.');
         default:
-          throw new UnimplementedError('Result kind $kind not implemented.');
+          throw UnimplementedError('Result kind $kind not implemented.');
       }
     }
-    throw new UnimplementedError('Unimplemented opcode handler: ${rs.opcode}');
+    throw UnimplementedError('Unimplemented opcode handler: ${rs.opcode}');
   }
 
   Future close() async {
@@ -148,7 +145,7 @@ class FrameProtocol {
         return i;
       }
     }
-    throw new StateError('Unable to open a new stream, maximum limit reached.');
+    throw StateError('Unable to open a stream, maximum limit reached.');
   }
 
   void _handleResponse(Frame frame) {
@@ -165,7 +162,7 @@ class FrameProtocol {
 
   void _throwIfError(Frame frame) {
     if (frame.opcode == Opcode.error) {
-      throw new ErrorResponse.parse(frame.body);
+      throw ErrorResponse.parse(frame.body);
     }
   }
 }
@@ -177,10 +174,10 @@ class ErrorResponse implements Exception {
   ErrorResponse(this.code, this.message);
 
   factory ErrorResponse.parse(Uint8List body) {
-    final br = new _BodyReader(body);
+    final br = _BodyReader(body);
     final code = br.parseInt();
     final message = br.parseShortString();
-    return new ErrorResponse(code, message);
+    return ErrorResponse(code, message);
   }
 
   @override
@@ -219,22 +216,22 @@ ResultPage _parseRowsBody(Client client, _Query q, _BodyReader br) {
       keyspace = br.parseShortString();
       table = br.parseShortString();
     }
-    String column = br.parseShortString();
+    final column = br.parseShortString();
     final valueType = _parseValueType(br);
-    columns.add(new Column(keyspace, table, column, valueType));
+    columns.add(Column(keyspace, table, column, valueType));
   }
   final rowsCount = br.parseInt();
-  final rows = new List<_Row>(rowsCount);
+  final rows = List<_Row>(rowsCount);
   for (int i = 0; i < rowsCount; i++) {
-    final values = new List(columnsCount);
+    final values = List(columnsCount);
     for (int j = 0; j < columnsCount; j++) {
       final bytes = br.parseBytes();
       values[j] = bytes == null ? null : decodeData(columns[j].type, bytes);
     }
-    rows[i] = new _Row(columns, values);
+    rows[i] = _Row(columns, values);
   }
 
-  return new _RowsPage(client, q, columns, rows, !hasMorePages, pagingState);
+  return _RowsPage(client, q, columns, rows, !hasMorePages, pagingState);
 }
 
 enum RawType {
@@ -314,12 +311,12 @@ Type _parseValueType(_BodyReader br) {
   final typeCode = br.parseShort();
   final rawType = _rawTypeMap[typeCode];
   if (rawType == null) {
-    throw new UnimplementedError('Unknown type code: $typeCode');
+    throw UnimplementedError('Unknown type code: $typeCode');
   }
   switch (rawType) {
     case RawType.custom:
       final customType = br.parseShortString();
-      return new Type._(RawType.custom, customType, null);
+      return Type._(RawType.custom, customType, null);
     case RawType.ascii:
     case RawType.bigint:
     case RawType.blob:
@@ -339,9 +336,9 @@ Type _parseValueType(_BodyReader br) {
     case RawType.time:
     case RawType.smallint:
     case RawType.tinyint:
-      return new Type(rawType);
+      return Type(rawType);
     default:
-      throw new UnimplementedError('Unhandled raw type: $rawType');
+      throw UnimplementedError('Unhandled raw type: $rawType');
   }
 }
 
@@ -361,11 +358,14 @@ abstract class Row {
 }
 
 class _Row implements Row {
+  @override
   final List<Column> columns;
+  @override
   final List values;
 
   _Row(this.columns, this.values);
 
+  @override
   Map<String, dynamic> asMap() {
     final map = <String, dynamic>{};
     for (int i = 0; i < columns.length; i++) {
@@ -384,7 +384,7 @@ abstract class ResultPage implements Page<Row> {
 class _Query {
   final String query;
   final Consistency consistency;
-  final values;
+  final dynamic values;
   final int pageSize;
   final Uint8List pagingState;
 

@@ -10,7 +10,7 @@ Uint8List buildQuery({
   consistency ??= Consistency.quorum;
   final hasPageSize = pageSize != null && pageSize > 0;
 
-  final bw = new _BodyWriter();
+  final bw = _BodyWriter();
   bw.writeLongString(query);
   bw.writeShort(consistencyValue(consistency));
 
@@ -41,7 +41,7 @@ Uint8List buildQuery({
   } else if (values != null && values is Map) {
     bw.writeShort(values.length);
     values.forEach((k, v) {
-      bw.writeShortString(k);
+      bw.writeShortString(k as String);
       if (v == null) {
         bw.writeNormalInt(-1);
       } else {
@@ -49,7 +49,7 @@ Uint8List buildQuery({
       }
     });
   } else if (values != null) {
-    throw new StateError('Unknown values: $values');
+    throw StateError('Unknown values: $values');
   }
   if (hasPageSize) {
     bw.writeNormalInt(pageSize);
@@ -86,6 +86,6 @@ int consistencyValue(Consistency value) {
     case Consistency.localOne:
       return 0x000A;
     default:
-      throw new UnimplementedError('Unknown enum value: $value');
+      throw UnimplementedError('Unknown enum value: $value');
   }
 }

@@ -1,7 +1,7 @@
 part of 'cassandart_impl.dart';
 
 ByteData _byteData(List<int> data) {
-  return new ByteData.view(new Uint8List.fromList(data).buffer);
+  return ByteData.view(Uint8List.fromList(data).buffer);
 }
 
 class Value<T> {
@@ -11,16 +11,15 @@ class Value<T> {
   Value._(this.type, this.value);
 
   static Value<int> int8(int value) =>
-      new Value._(const Type(RawType.tinyint), value);
+      Value._(const Type(RawType.tinyint), value);
 
   static Value<int> int16(int value) =>
-      new Value._(const Type(RawType.smallint), value);
+      Value._(const Type(RawType.smallint), value);
 
-  static Value<int> int32(int value) =>
-      new Value._(const Type(RawType.int), value);
+  static Value<int> int32(int value) => Value._(const Type(RawType.int), value);
 
   static Value<double> float(double value) =>
-      new Value._(const Type(RawType.float), value);
+      Value._(const Type(RawType.float), value);
 }
 
 decodeData(Type type, List<int> data) {
@@ -50,27 +49,26 @@ decodeData(Type type, List<int> data) {
     case RawType.timeuuid:
       return Uint8List.fromList(data);
     default:
-      throw new UnimplementedError(
-          'Decode of ${type.rawType} not implemented.');
+      throw UnimplementedError('Decode of ${type.rawType} not implemented.');
   }
 }
 
 Uint8List encodeString(String value) => castBytes(utf8.encode(value));
 
 Uint8List encodeBigint(int value) {
-  final data = new ByteData(8);
+  final data = ByteData(8);
   data.setInt64(0, value, Endian.big);
-  return new Uint8List.view(data.buffer);
+  return Uint8List.view(data.buffer);
 }
 
 Uint8List encodeDouble(double value) {
-  final data = new ByteData(8);
+  final data = ByteData(8);
   data.setFloat64(0, value, Endian.big);
-  return new Uint8List.view(data.buffer);
+  return Uint8List.view(data.buffer);
 }
 
-final _boolFalse = new Uint8List.fromList([0]);
-final _boolTrue = new Uint8List.fromList([1]);
+final _boolFalse = Uint8List.fromList([0]);
+final _boolTrue = Uint8List.fromList([1]);
 
 Uint8List encodeData(value) {
   if (value is String) {
@@ -88,26 +86,26 @@ Uint8List encodeData(value) {
   } else if (value is Value<int> && value.type.rawType == RawType.tinyint) {
     return castBytes([value.value]);
   } else if (value is Value<int> && value.type.rawType == RawType.smallint) {
-    final data = new ByteData(2);
+    final data = ByteData(2);
     data.setInt16(0, value.value, Endian.big);
-    return new Uint8List.view(data.buffer);
+    return Uint8List.view(data.buffer);
   } else if (value is Value<int> && value.type.rawType == RawType.int) {
-    final data = new ByteData(4);
+    final data = ByteData(4);
     data.setInt32(0, value.value, Endian.big);
-    return new Uint8List.view(data.buffer);
+    return Uint8List.view(data.buffer);
   } else if (value is Value<double> && value.type.rawType == RawType.float) {
-    final data = new ByteData(4);
+    final data = ByteData(4);
     data.setFloat32(0, value.value, Endian.big);
-    return new Uint8List.view(data.buffer);
+    return Uint8List.view(data.buffer);
   } else {
-    throw new UnimplementedError('Encode of $value not implemented. '
+    throw UnimplementedError('Encode of $value not implemented. '
         'Type: ${value.runtimeType}');
   }
 }
 
 class _BodyWriter extends ByteDataWriter {
   void writeByte(int value) {
-    write(new Uint8List(1)..[0] = value);
+    write(Uint8List(1)..[0] = value);
   }
 
   void writeBytes(Uint8List value) {
@@ -149,7 +147,7 @@ class _BodyReader extends ByteDataReader {
     add(body);
   }
 
-  Uint8List parseBytes({bool copy: false}) {
+  Uint8List parseBytes({bool copy = false}) {
     final length = parseInt();
     return length == -1 ? null : read(length);
   }

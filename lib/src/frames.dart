@@ -26,8 +26,8 @@ class FrameHeader {
   bool get isResponse => !isRequest;
 
   Uint8List toHeaderBytes() {
-    final list = new Uint8List(9);
-    final data = new ByteData.view(list.buffer);
+    final list = Uint8List(9);
+    final data = ByteData.view(list.buffer);
     final flag = (isCompressed ? _compressedMask : 0x00) |
         (requiresTracing ? _tracingMask : 0x00) |
         (hasCustomPayload ? _customPayloadMask : 0x00) |
@@ -52,7 +52,7 @@ class Frame {
 }
 
 Stream<Frame> parseFrames(Stream<List<int>> input) {
-  return new _FrameStreamTransformer().parseFrames(input);
+  return _FrameStreamTransformer().parseFrames(input);
 }
 
 class FrameSink implements Sink<Frame> {
@@ -75,11 +75,11 @@ class FrameSink implements Sink<Frame> {
 }
 
 class _FrameStreamTransformer {
-  final _buffer = new ByteDataReader();
+  final _buffer = ByteDataReader();
   FrameHeader _header;
 
   Stream<Frame> parseFrames(Stream<List<int>> input) {
-    return input.transform(new StreamTransformer.fromHandlers(
+    return input.transform(StreamTransformer.fromHandlers(
       handleData: (List<int> data, EventSink<Frame> sink) {
         _buffer.add(data);
         for (; _emitFrame(sink);) {}
@@ -109,7 +109,7 @@ class _FrameStreamTransformer {
           (headerBytes[7] << 8) +
           headerBytes[8];
 
-      _header = new FrameHeader(
+      _header = FrameHeader(
         isRequest: !isResponse,
         protocolVersion: protocolVersion,
         isCompressed: isCompressed,
@@ -128,7 +128,7 @@ class _FrameStreamTransformer {
 
     final Uint8List body =
         _header.length == 0 ? null : _buffer.read(_header.length);
-    final frame = new Frame(_header, body);
+    final frame = Frame(_header, body);
     _header = null;
     sink.add(frame);
     return true;

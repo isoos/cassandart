@@ -11,7 +11,7 @@ void main() {
     setUpAll(() async {
       client = await Cluster.connect(
         ['localhost:9042'],
-        authenticator: new PasswordAuthenticator('cassandra', 'cassandra'),
+        authenticator: PasswordAuthenticator('cassandra', 'cassandra'),
       );
     });
 
@@ -87,7 +87,7 @@ void main() {
             'int_col': Value.int32(234353),
             'bigint_col': 573653345345,
             'bool_col': true,
-            'blob_col': new Uint8List.fromList([0, 2, 4, 6, 8, 10]),
+            'blob_col': Uint8List.fromList([0, 2, 4, 6, 8, 10]),
             'float_col': Value.float(-12.5),
             'double_col': -1.25,
           });

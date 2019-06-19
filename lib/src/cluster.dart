@@ -14,7 +14,7 @@ class Cluster implements Client {
     Authenticator authenticator,
     Consistency consistency,
   }) async {
-    final client = new Cluster._(authenticator, consistency);
+    final client = Cluster._(authenticator, consistency);
     for (String hostPort in hostPorts) {
       await client._connect(hostPort);
     }
@@ -50,7 +50,7 @@ class Cluster implements Client {
     Uint8List pagingState,
   }) {
     consistency ??= _consistency;
-    final q = new _Query(query, consistency, values, pageSize, pagingState);
+    final q = _Query(query, consistency, values, pageSize, pagingState);
     final body = buildQuery(
       query: query,
       consistency: consistency,
@@ -92,10 +92,9 @@ class _Connection {
     final host = hostPort.split(':').first;
     final port = int.parse(hostPort.split(':').last);
     final socket = await Socket.connect(host, port);
-    final frameHandler =
-        new FrameProtocol(new FrameSink(socket), parseFrames(socket));
+    final frameHandler = FrameProtocol(FrameSink(socket), parseFrames(socket));
     await frameHandler.start(authenticator);
-    return new _Connection._(hostPort, frameHandler);
+    return _Connection._(hostPort, frameHandler);
   }
 
   Future close() async {

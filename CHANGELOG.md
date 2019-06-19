@@ -2,6 +2,7 @@
 
 - Added types: timestamp, timeuuid and counter.
 - Fixed a bug where it would crash on selecting and inserting a null field.
+- Updated to Dart 2.3 standards
 
 ## 0.1.0
 

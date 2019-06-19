@@ -9,7 +9,7 @@ void main() {
     void encodeDecodeCore(RawType rawType, value, int length) {
       final encoded = encodeData(value);
       expect(encoded.length, length);
-      final decoded = decodeData(new Type(rawType), encoded);
+      final decoded = decodeData(Type(rawType), encoded);
       expect(decoded, value);
     }
 
@@ -44,9 +44,8 @@ void main() {
     });
 
     test('blob', () {
-      encodeDecodeCore(RawType.blob, new Uint8List.fromList([0, 2, 5]), 3);
-      encodeDecodeCore(
-          RawType.blob, new Uint8List.fromList([1, 255, 255, 9]), 4);
+      encodeDecodeCore(RawType.blob, Uint8List.fromList([0, 2, 5]), 3);
+      encodeDecodeCore(RawType.blob, Uint8List.fromList([1, 255, 255, 9]), 4);
     });
 
     test('timeuuid', () {
