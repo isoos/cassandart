@@ -94,6 +94,11 @@ void main() {
       });
     });
 
+    test('error in query', () async {
+      expect(() => client.query('SELEECT FROM cassandart_test.simple'),
+          throwsException);
+    });
+
     test('drop keyspace', () async {
       await client.execute('DROP KEYSPACE cassandart_test;');
     });
