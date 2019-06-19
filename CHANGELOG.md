@@ -1,3 +1,8 @@
+## 0.1.1
+
+- Added types: timestamp, timeuuid and counter.
+- Fixed a bug where it would crash on selecting and inserting a null field.
+
 ## 0.1.0
 
 - *BREAKING CHANGES*:

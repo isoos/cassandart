@@ -34,6 +34,8 @@ decodeData(Type type, List<int> data) {
     case RawType.varchar:
       return utf8.decode(data);
     case RawType.bigint:
+    case RawType.counter:
+    case RawType.timestamp:
       return _byteData(data).getInt64(0, Endian.big);
     case RawType.int:
       return _byteData(data).getInt32(0, Endian.big);
@@ -45,6 +47,8 @@ decodeData(Type type, List<int> data) {
       return _byteData(data).getFloat32(0, Endian.big);
     case RawType.double:
       return _byteData(data).getFloat64(0, Endian.big);
+    case RawType.timeuuid:
+      return Uint8List.fromList(data);
     default:
       throw new UnimplementedError(
           'Decode of ${type.rawType} not implemented.');
@@ -79,6 +83,8 @@ Uint8List encodeData(value) {
     return value ? _boolTrue : _boolFalse;
   } else if (value is Uint8List) {
     return value;
+  } else if (value is List<int>) {
+    return Uint8List.fromList(value);
   } else if (value is Value<int> && value.type.rawType == RawType.tinyint) {
     return castBytes([value.value]);
   } else if (value is Value<int> && value.type.rawType == RawType.smallint) {
@@ -94,7 +100,8 @@ Uint8List encodeData(value) {
     data.setFloat32(0, value.value, Endian.big);
     return new Uint8List.view(data.buffer);
   } else {
-    throw new UnimplementedError('Encode of $value not implemented.');
+    throw new UnimplementedError('Encode of $value not implemented. '
+        'Type: ${value.runtimeType}');
   }
 }
 
@@ -144,7 +151,7 @@ class _BodyReader extends ByteDataReader {
 
   Uint8List parseBytes({bool copy: false}) {
     final length = parseInt();
-    return read(length, copy: copy);
+    return length == -1 ? null : read(length);
   }
 
   int parseShort() => readInt16();

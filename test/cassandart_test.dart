@@ -16,7 +16,7 @@ void main() {
     });
 
     tearDownAll(() async {
-      await client.close();
+      await client?.close();
     });
 
     test('query cluster name', () async {
@@ -45,7 +45,7 @@ void main() {
 
       await client.execute(
           'INSERT INTO cassandart_test.simple (id, content) VALUES (:id, :content)',
-          values: {'id': 'id-3', 'content': 'content-3'});
+          values: {'id': 'id-3', 'content': null});
 
       final page1 = await client.query(
           'SELECT * FROM cassandart_test.simple WHERE id = ?',
@@ -55,20 +55,22 @@ void main() {
       final page2 = await client.query('SELECT * FROM cassandart_test.simple');
       expect(page2.items.length, 3);
 
+      expect(page2.items.length, 3);
+
       final page3 = await client.query(
+          'SELECT * FROM cassandart_test.simple WHERE id = ?',
+          values: ['id-3']);
+      expect(page3.items.single.values, ['id-3', null]);
+
+      final pageAll = await client.query(
         'SELECT * FROM cassandart_test.simple',
         pageSize: 2,
       );
-      expect(page3.items.length, 2);
-      expect(page3.isLast, false);
-      final page4 = await page3.next();
+      expect(pageAll.items.length, 2);
+      expect(pageAll.isLast, false);
+      final page4 = await pageAll.next();
       expect(page4.items.length, 1);
       expect(page4.isLast, true);
-    });
-
-    test('error in query', () async {
-      expect(() => client.query('SELEECT FROM cassandart_test.simple'),
-          throwsException);
     });
 
     test('types', () async {
@@ -102,6 +104,11 @@ void main() {
         'float_col': -12.5,
         'double_col': -1.25,
       });
+    });
+
+    test('error in query', () async {
+      expect(() => client.query('SELEECT FROM cassandart_test.simple'),
+          throwsException);
     });
 
     test('drop keyspace', () async {

@@ -229,7 +229,7 @@ ResultPage _parseRowsBody(Client client, _Query q, _BodyReader br) {
     final values = new List(columnsCount);
     for (int j = 0; j < columnsCount; j++) {
       final bytes = br.parseBytes();
-      values[j] = decodeData(columns[j].type, bytes);
+      values[j] = bytes == null ? null : decodeData(columns[j].type, bytes);
     }
     rows[i] = new _Row(columns, values);
   }
