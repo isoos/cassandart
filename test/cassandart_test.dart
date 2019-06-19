@@ -16,7 +16,7 @@ void main() {
     });
 
     tearDownAll(() async {
-      await client.close();
+      await client?.close();
     });
 
     test('query cluster name', () async {
@@ -43,13 +43,22 @@ void main() {
           'INSERT INTO cassandart_test.simple (id, content) VALUES (:id, :content)',
           values: {'id': 'id-2', 'content': 'content-2'});
 
+      await client.execute(
+          'INSERT INTO cassandart_test.simple (id, content) VALUES (:id, :content)',
+          values: {'id': 'id-3', 'content': null});
+
       final page1 = await client.query(
           'SELECT * FROM cassandart_test.simple WHERE id = ?',
           values: ['id-1']);
       expect(page1.items.single.values, ['id-1', 'content-1']);
 
       final page2 = await client.query('SELECT * FROM cassandart_test.simple');
-      expect(page2.items.length, 2);
+      expect(page2.items.length, 3);
+
+      final page3 = await client.query(
+          'SELECT * FROM cassandart_test.simple WHERE id = ?',
+          values: ['id-3']);
+      expect(page3.items.single.values, ['id-3', null]);
     });
 
     test('types', () async {
