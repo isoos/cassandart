@@ -111,7 +111,7 @@ class FrameProtocol {
     throw new UnimplementedError('Unimplemented opcode handler: ${rs.opcode}');
   }
 
-  Future<RowsPage> query(Client client, _Query q, Uint8List body) async {
+  Future<ResultPage> query(Client client, _Query q, Uint8List body) async {
     final rs = await send(Opcode.query, body);
     _throwIfError(rs);
     if (rs.opcode == Opcode.result) {
@@ -195,7 +195,7 @@ abstract class _ResultKind {
   static const int schemaChange = 0x0005;
 }
 
-RowsPage _parseRowsBody(Client client, _Query q, _BodyReader br) {
+ResultPage _parseRowsBody(Client client, _Query q, _BodyReader br) {
   final flags = br.parseInt();
   final hasGlobalTableSpec = flags & 0x0001 != 0;
   final hasMorePages = flags & 0x0002 != 0;
@@ -375,9 +375,10 @@ class _Row implements Row {
   }
 }
 
-abstract class RowsPage implements Page<Row> {
+abstract class ResultPage implements Page<Row> {
   List<Column> get columns;
   Uint8List get pagingState;
+  List<Row> get rows => items;
 }
 
 class _Query {
@@ -396,7 +397,7 @@ class _Query {
   );
 }
 
-class _RowsPage extends Object with PageMixin<Row> implements RowsPage {
+class _RowsPage extends Object with PageMixin<Row>, ResultPage {
   final Client _client;
   final _Query _query;
 
@@ -416,7 +417,7 @@ class _RowsPage extends Object with PageMixin<Row> implements RowsPage {
       this.pagingState);
 
   @override
-  Future<RowsPage> next() async {
+  Future<ResultPage> next() async {
     if (isLast) return null;
     return await _client.query(
       _query.query,

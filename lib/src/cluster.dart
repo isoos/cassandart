@@ -41,7 +41,7 @@ class Cluster implements Client {
   }
 
   @override
-  Future<RowsPage> query(
+  Future<ResultPage> query(
     String query, {
     Consistency consistency,
     /* List | Map */

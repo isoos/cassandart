@@ -26,7 +26,7 @@ abstract class Client {
 
   /// Execute data row [query] with the given parameters and return a page
   /// object of the results rows (and further pagination support).
-  Future<RowsPage> query(
+  Future<ResultPage> query(
     String query, {
     Consistency consistency,
     /* List<dynamic> | Map<String, dynamic> */

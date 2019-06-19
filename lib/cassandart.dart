@@ -7,7 +7,7 @@ export 'src/cassandart_impl.dart'
         Consistency,
         PasswordAuthenticator,
         RawType,
+        ResultPage,
         Row,
-        RowsPage,
         Type,
         Value;

@@ -6,6 +6,7 @@
   - Renamed `CassandraClient` -> `Client`.
   - Renamed `CassandraPool` -> `Cluster` and updated `connect`.
   - Renamed `DataClass` -> `RawType`, `DataType` -> `Type`, `TypedValue` -> `Value`.
+  - Renamed `RowsPage` -> `ResultPage`.
 
 - Query result pagination. 
 
