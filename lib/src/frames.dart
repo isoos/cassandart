@@ -51,7 +51,7 @@ class Frame {
   int get streamId => header.streamId;
 }
 
-Stream<Frame> parseFrames(Stream<List<int>> input) {
+Stream<Frame> parseFrames(Stream<Uint8List> input) {
   return _FrameStreamTransformer().parseFrames(input);
 }
 
@@ -78,9 +78,9 @@ class _FrameStreamTransformer {
   final _buffer = ByteDataReader();
   FrameHeader _header;
 
-  Stream<Frame> parseFrames(Stream<List<int>> input) {
+  Stream<Frame> parseFrames(Stream<Uint8List> input) {
     return input.transform(StreamTransformer.fromHandlers(
-      handleData: (List<int> data, EventSink<Frame> sink) {
+      handleData: (Uint8List data, EventSink<Frame> sink) {
         _buffer.add(data);
         for (; _emitFrame(sink);) {}
       },
