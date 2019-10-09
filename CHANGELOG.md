@@ -1,3 +1,7 @@
+## 0.1.2
+
+- Updated to use `Uint8List`.
+
 ## 0.1.1
 
 - Added types: timestamp, timeuuid and counter.
