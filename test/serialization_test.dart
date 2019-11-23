@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:test/test.dart';
@@ -46,6 +47,11 @@ void main() {
     test('blob', () {
       encodeDecodeCore(RawType.blob, Uint8List.fromList([0, 2, 5]), 3);
       encodeDecodeCore(RawType.blob, Uint8List.fromList([1, 255, 255, 9]), 4);
+    });
+
+    test('inet', () {
+      encodeDecodeCore(RawType.inet, InternetAddress('192.0.2.0'), 4);
+      encodeDecodeCore(RawType.inet, InternetAddress('2001:db8::'), 16);
     });
 
     test('timeuuid', () {
