@@ -48,8 +48,29 @@ decodeData(Type type, List<int> data) {
       return _byteData(data).getFloat64(0, Endian.big);
     case RawType.timeuuid:
       return Uint8List.fromList(data);
+    case RawType.inet:
+      return decodeInet(data);
     default:
       throw UnimplementedError('Decode of ${type.rawType} not implemented.');
+  }
+}
+
+InternetAddress decodeInet(List<int> data) {
+  if(data.length == 4) { // IPv4
+    final address = data.join('.');
+    return InternetAddress(address);
+  }
+  else if(data.length == 16) { // IPv6
+    String address = '';
+    for(int i = 0; i < 16; i += 2) {
+      address += ((data[i] << 8) + data[i+1]).toRadixString(16);
+      if(i < 14) {
+        address += ':';
+      }
+    }
+    return InternetAddress(address);
+  } else {
+    throw ArgumentError('Length of data must be 4 or 16 for inet address.');
   }
 }
 
@@ -97,6 +118,8 @@ Uint8List encodeData(value) {
     final data = ByteData(4);
     data.setFloat32(0, value.value, Endian.big);
     return Uint8List.view(data.buffer);
+  } else if(value is InternetAddress) {
+    return value.rawAddress;
   } else {
     throw UnimplementedError('Encode of $value not implemented. '
         'Type: ${value.runtimeType}');
