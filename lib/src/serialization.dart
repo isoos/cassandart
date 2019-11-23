@@ -56,15 +56,16 @@ decodeData(Type type, List<int> data) {
 }
 
 InternetAddress decodeInet(List<int> data) {
-  if(data.length == 4) { // IPv4
+  if (data.length == 4) {
+    // IPv4
     final address = data.join('.');
     return InternetAddress(address);
-  }
-  else if(data.length == 16) { // IPv6
+  } else if (data.length == 16) {
+    // IPv6
     String address = '';
-    for(int i = 0; i < 16; i += 2) {
-      address += ((data[i] << 8) + data[i+1]).toRadixString(16);
-      if(i < 14) {
+    for (int i = 0; i < 16; i += 2) {
+      address += ((data[i] << 8) + data[i + 1]).toRadixString(16);
+      if (i < 14) {
         address += ':';
       }
     }
@@ -118,7 +119,7 @@ Uint8List encodeData(value) {
     final data = ByteData(4);
     data.setFloat32(0, value.value, Endian.big);
     return Uint8List.view(data.buffer);
-  } else if(value is InternetAddress) {
+  } else if (value is InternetAddress) {
     return value.rawAddress;
   } else {
     throw UnimplementedError('Encode of $value not implemented. '
