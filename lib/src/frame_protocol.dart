@@ -21,8 +21,10 @@ abstract class Opcode {
 
 class FrameProtocol {
   final protocolVersion = 4;
+  // TODO: Better control over sockets?
   final Sink<Frame> _requestSink;
   final Stream<Frame> _responseStream;
+  // TODO: Timeout for [_responseCompleters]?
   final _responseCompleters = <int, Completer<Frame>>{};
   final _eventController = StreamController<Frame>();
   StreamSubscription<Frame> _responseSubscription;
@@ -74,6 +76,7 @@ class FrameProtocol {
     final c = Completer<Frame>();
     _responseCompleters[frame.header.streamId] = c;
     _requestSink.add(frame);
+    // TODO: add timeout HERE for c?
     return c.future;
   }
 

@@ -82,6 +82,7 @@ class Cluster implements Client {
 class _Connection {
   final String hostPort;
   final FrameProtocol _protocol;
+  static const timeout = Duration(seconds: 5); // TODO: timeout
 
   _Connection._(this.hostPort, this._protocol);
 
@@ -91,7 +92,9 @@ class _Connection {
   }) async {
     final host = hostPort.split(':').first;
     final port = int.parse(hostPort.split(':').last);
-    final socket = await Socket.connect(host, port);
+    // TODO: better timeout in socket opening
+    final socket = await Socket.connect(host, port, timeout: timeout);
+    // TODO: problem, how to know where did the socket fail?
     final frameHandler = FrameProtocol(FrameSink(socket), parseFrames(socket));
     await frameHandler.start(authenticator);
     return _Connection._(hostPort, frameHandler);
