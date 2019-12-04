@@ -17,6 +17,7 @@ class Cluster implements Client {
     for (String hostPort in hostPorts) {
       await client._connect(hostPort);
     }
+    client._collectPeers();
     return client;
   }
 
@@ -83,6 +84,22 @@ class Cluster implements Client {
     // if above fails becase some unknown flotng point error:
     return _peers[Random().nextInt(_peers.length)];
   }
+
+  _collectPeers() async {
+    final page = await query('SELECT peer FROM system.peers');
+    final newIPs =
+        page.items.map((row) => row.values[0] as InternetAddress).toList();
+    for (final peer in _peers) {
+      if (newIPs.contains(peer.host)) {
+        newIPs.remove(peer.host);
+      }
+    }
+    for (final ip in newIPs) {
+      final newPeer =
+          await _Peer.connect(ip, 9042, authenticator: _authenticator);
+      _peers.add(newPeer);
+    }
+  }
 }
 
 class _Peer {
@@ -96,9 +113,10 @@ class _Peer {
 
   static const int _latencyMaxLength = 100;
   Queue<double> _lastLatencies;
-  // Average latency of the last [_latencyMaxLength] request.
+
+  /// Average latency of the last [_latencyMaxLength] request.
   double get latency {
-    if(_lastLatencies.length == 0) {
+    if (_lastLatencies.isEmpty) {
       return 0;
     }
     return _lastLatencies.reduce((a, b) => a + b) / _lastLatencies.length;
@@ -132,41 +150,22 @@ class _Peer {
   }
 
   Future _sendExecute(String query, Consistency consistency, values) async {
-    final sw = Stopwatch();
-    sw.start();
-    final result = await _protocol.execute(query, consistency, values);
-    sw.stop();
-    if (_lastLatencies.length >= _latencyMaxLength) {
-      _lastLatencies.removeLast();
-    }
-    _lastLatencies.addFirst(sw.elapsedMicroseconds * 1e-6);
-    return result;
+    return await _trackLatency(_protocol.execute(query, consistency, values));
   }
 
-  Future<ResultPage> _sendQuery<R>(
-      Client client, _Query q, Uint8List body) async {
-    final sw = Stopwatch();
-    sw.start();
-    final result = await _protocol.query(client, q, body);
-    sw.stop();
-    if (_lastLatencies.length >= _latencyMaxLength) {
-      _lastLatencies.removeLast();
-    }
-    _lastLatencies.addFirst(sw.elapsedMicroseconds * 1e-6);
-    return result;
+  Future<ResultPage> _sendQuery(Client client, _Query q, Uint8List body) async {
+    return await _trackLatency(_protocol.query(client, q, body));
   }
 
-  /*
   Future<R> _trackLatency<R>(Future<R> f) async {
     final sw = Stopwatch();
     sw.start();
     final result = await f;
     sw.stop();
-    if(_lastLatencies.length < _latencyMaxLength) {
+    if (_lastLatencies.length >= _latencyMaxLength) {
       _lastLatencies.removeLast();
     }
-    _lastLatencies.addFirst(sw.elapsedMicroseconds*1e-6);
+    _lastLatencies.addFirst(sw.elapsedMicroseconds * 1e-6);
     return result;
   }
-   */
 }
