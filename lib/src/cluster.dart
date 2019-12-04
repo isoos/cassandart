@@ -4,8 +4,7 @@ part of 'cassandart_impl.dart';
 class Cluster implements Client {
   final Authenticator _authenticator;
   final Consistency _consistency;
-  final _connections = <_Connection>[];
-  int _connectionCursor = 0;
+  final _peers = <_Peer>[];
 
   Cluster._(this._authenticator, this._consistency);
 
@@ -23,8 +22,8 @@ class Cluster implements Client {
 
   /// Close all open connections in the cluster.
   Future close() async {
-    while (_connections.isNotEmpty) {
-      await _connections.removeLast().close();
+    while (_peers.isNotEmpty) {
+      await _peers.removeLast().close();
     }
   }
 
@@ -36,8 +35,8 @@ class Cluster implements Client {
     values,
   }) {
     consistency ??= _consistency;
-    return _withConnection(
-        (c) => c._protocol.execute(query, consistency, values));
+    final peer = _selectPeer();
+    return peer._sendExecute(query, consistency, values);
   }
 
   @override
@@ -58,47 +57,31 @@ class Cluster implements Client {
       pageSize: pageSize,
       pagingState: pagingState,
     );
-    return _withConnection((c) => c._protocol.query(this, q, body));
+    final peer = _selectPeer();
+    return peer._sendQuery(this, q, body);
   }
 
   Future _connect(String hostPort) async {
-    final c = await _Connection.open(
+    final c = await _Peer.connectAdress(
       hostPort,
       authenticator: _authenticator,
     );
-    _connections.add(c);
+    _peers.add(c);
   }
 
-  Future<R> _withConnection<R>(Future<R> body(_Connection c)) async {
-    _connectionCursor++;
-    if (_connectionCursor >= _connections.length) {
-      _connectionCursor = 0;
+  _Peer _selectPeer() {
+    final latencies = Map.fromIterables(_peers.map((p) => p.latency), _peers);
+    final latenciesSum = latencies.keys.fold<double>(0, (a, b) => a + 1 / b);
+    final rd = Random().nextDouble();
+    double lat = 0;
+    for (final entry in latencies.entries) {
+      lat += 1 / entry.key;
+      if (rd * latenciesSum < lat) {
+        return entry.value;
+      }
     }
-    final c = _connections[_connectionCursor];
-    return await body(c);
-  }
-}
-
-class _Connection {
-  final String hostPort;
-  final FrameProtocol _protocol;
-
-  _Connection._(this.hostPort, this._protocol);
-
-  static Future<_Connection> open(
-    String hostPort, {
-    @required Authenticator authenticator,
-  }) async {
-    final host = hostPort.split(':').first;
-    final port = int.parse(hostPort.split(':').last);
-    final socket = await Socket.connect(host, port);
-    final frameHandler = FrameProtocol(FrameSink(socket), parseFrames(socket));
-    await frameHandler.start(authenticator);
-    return _Connection._(hostPort, frameHandler);
-  }
-
-  Future close() async {
-    await _protocol.close();
+    // if above fails becase some unknown flotng point error:
+    return _peers[Random().nextInt(_peers.length)];
   }
 }
 
@@ -108,23 +91,31 @@ class _Peer {
 
   /// Port of the connection
   final int port;
+
   final FrameProtocol _protocol;
 
   static const int _latencyMaxLength = 100;
   Queue<double> _lastLatencies;
   // Average latency of the last [_latencyMaxLength] request.
   double get latency {
+    if(_lastLatencies.length == 0) {
+      return 0;
+    }
     return _lastLatencies.reduce((a, b) => a + b) / _lastLatencies.length;
   }
 
   _Peer._(this.host, this.port, this._protocol);
+
+  /// Connect to a server with a string address
   static Future<_Peer> connectAdress(String hostPort,
       {@required Authenticator authenticator}) async {
-    final host = InternetAddress(hostPort.split(':').first);
+    final host =
+        (await InternetAddress.lookup(hostPort.split(':').first)).first;
     final port = int.parse(hostPort.split(':').last);
     return await connect(host, port, authenticator: authenticator);
   }
 
+  /// Connect to a server with ip/port address
   static Future<_Peer> connect(InternetAddress host, int port,
       {@required Authenticator authenticator}) async {
     final socket = await Socket.connect(host, port);
@@ -132,6 +123,12 @@ class _Peer {
     await frameHandler.start(authenticator);
     final peer = _Peer._(host, port, frameHandler);
     peer._lastLatencies = Queue<double>();
+    return peer;
+  }
+
+  /// Closes the connection to the peer
+  close() async {
+    return await _protocol.close();
   }
 
   Future _sendExecute(String query, Consistency consistency, values) async {
@@ -139,25 +136,27 @@ class _Peer {
     sw.start();
     final result = await _protocol.execute(query, consistency, values);
     sw.stop();
-    if(_lastLatencies.length < _latencyMaxLength) {
+    if (_lastLatencies.length >= _latencyMaxLength) {
       _lastLatencies.removeLast();
     }
-    _lastLatencies.addFirst(sw.elapsedMicroseconds*1e-6);
+    _lastLatencies.addFirst(sw.elapsedMicroseconds * 1e-6);
     return result;
   }
 
-  Future _sendQuery(Client client, _Query q, Uint8List body) async {
+  Future<ResultPage> _sendQuery<R>(
+      Client client, _Query q, Uint8List body) async {
     final sw = Stopwatch();
     sw.start();
-    final result = await _trackLatency(_protocol.query(client, q, body));
+    final result = await _protocol.query(client, q, body);
     sw.stop();
-    if(_lastLatencies.length < _latencyMaxLength) {
+    if (_lastLatencies.length >= _latencyMaxLength) {
       _lastLatencies.removeLast();
     }
-    _lastLatencies.addFirst(sw.elapsedMicroseconds*1e-6);
+    _lastLatencies.addFirst(sw.elapsedMicroseconds * 1e-6);
     return result;
   }
 
+  /*
   Future<R> _trackLatency<R>(Future<R> f) async {
     final sw = Stopwatch();
     sw.start();
@@ -169,4 +168,5 @@ class _Peer {
     _lastLatencies.addFirst(sw.elapsedMicroseconds*1e-6);
     return result;
   }
+   */
 }
