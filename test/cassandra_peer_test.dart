@@ -38,7 +38,6 @@ void main() {
       sleep(Duration(seconds: 15));
       final page = await client.query('SELECT cluster_name FROM system.local');
       expect(page.isLast, true);
-      // TODO: no timeout handling?
     });
   });
 }
