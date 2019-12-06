@@ -10,7 +10,7 @@ void main() {
 
     setUpAll(() async {
       client = await Cluster.connect(
-        ['remote-cassandra-server:9042'],
+        ['localhost:9042'],
         authenticator: PasswordAuthenticator('cassandra', 'cassandra'),
       );
     });
