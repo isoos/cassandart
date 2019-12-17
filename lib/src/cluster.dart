@@ -74,15 +74,20 @@ class Cluster implements Client {
   _Peer _selectPeer() {
     final latencies = Map.fromIterables(_peers.map((p) => p.latency), _peers);
     final latenciesSum = latencies.keys.fold<double>(0, (a, b) => a + 1 / b);
-    final rd = _random.nextDouble();
+    // If one of the latencies is 0, latenciesSum = Inf.
+    final rd = 1 - _random.nextDouble(); // 0 < rd <= 1
     double lat = 0;
     for (final entry in latencies.entries) {
       lat += 1 / entry.key;
-      if (rd * latenciesSum < lat) {
+      // If latSum = Inf, then this will be true if lat = Inf,
+      // which will happen if the latency of the current peer is 0, so
+      // it will select the first peer with zero latency.
+      if (rd * latenciesSum <= lat) {
         return entry.value;
       }
     }
-    // if above fails becase some unknown floating point error:
+    // The above code could fail because of the imprecision of floating-point
+    // numbers. In that case use a random peer as a fallback:
     return _peers[_random.nextInt(_peers.length)];
   }
 
