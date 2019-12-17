@@ -87,17 +87,13 @@ class Cluster implements Client {
   }
 
   _collectPeers() async {
-    final page = await query('SELECT peer FROM system.peers');
-    final newIPs =
-        page.items.map((row) => row.values[0] as InternetAddress).toList();
-    for (final peer in _peers) {
-      if (newIPs.contains(peer.host)) {
-        newIPs.remove(peer.host);
-      }
-    }
-    for (final ip in newIPs) {
+    final peers = await query('SELECT peer FROM system.peers');
+    await for (final row in peers.asStream()) {
+      final newIP = row.values[0] as InternetAddress;
+      final oldPeers = _peers.map((peer) => peer.host);
+      if (oldPeers.contains(newIP)) ;
       final newPeer =
-          await _Peer.connect(ip, 9042, authenticator: _authenticator);
+          await _Peer.connect(newIP, 9042, authenticator: _authenticator);
       _peers.add(newPeer);
     }
   }
