@@ -5,6 +5,7 @@ class Cluster implements Client {
   final Authenticator _authenticator;
   final Consistency _consistency;
   final _peers = <_Peer>[];
+  final _random = Random.secure();
 
   Cluster._(this._authenticator, this._consistency);
 
@@ -73,7 +74,7 @@ class Cluster implements Client {
   _Peer _selectPeer() {
     final latencies = Map.fromIterables(_peers.map((p) => p.latency), _peers);
     final latenciesSum = latencies.keys.fold<double>(0, (a, b) => a + 1 / b);
-    final rd = Random().nextDouble();
+    final rd = _random.nextDouble();
     double lat = 0;
     for (final entry in latencies.entries) {
       lat += 1 / entry.key;
@@ -81,8 +82,8 @@ class Cluster implements Client {
         return entry.value;
       }
     }
-    // if above fails becase some unknown flotng point error:
-    return _peers[Random().nextInt(_peers.length)];
+    // if above fails becase some unknown floating point error:
+    return _peers[_random.nextInt(_peers.length)];
   }
 
   _collectPeers() async {
