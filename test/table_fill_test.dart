@@ -4,13 +4,14 @@ import 'package:cassandart/cassandart.dart';
 import 'package:test/test.dart';
 
 void main() async {
-  group('Table fill test', () {
+  group('Table fill with hints test', () {
     Cluster cluster;
 
-    setUp(() async{
+    setUp(() async {
       cluster = await Cluster.connect(['remote-cassandra-server:9042'],
           authenticator: PasswordAuthenticator('cassandra', 'cassandra'));
     });
+
 
     test('Drop test', () async {
       await cluster.execute('''
@@ -36,23 +37,21 @@ void main() async {
 
     test('Insert test', () async {
       final random = Random();
-      for(int i = 0; i < 50; i++) {
+      for (int i = 0; i < 500; i++) {
         final len = random.nextInt(12) + 3;
         final chars = <int>[];
-        for(int j = 0; j < len; j++) {
+        for (int j = 0; j < len; j++) {
           chars.add(33 + random.nextInt(94));
         }
         final id = String.fromCharCodes(chars);
-        await cluster.execute('''
+        await cluster.executeHint('''
         INSERT INTO cassandart_fill.table_fill
         (id)
         VALUES (:id)
         ;
-        ''',
-            values: {'id': id});
-        print('$i: $id');
+        ''', values: {'id': id}, hint: id);
+        //print('$i: $id');
       }
-    });
-
+    }, timeout: Timeout(Duration(seconds: 60)));
   });
 }
