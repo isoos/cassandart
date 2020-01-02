@@ -50,7 +50,6 @@ void main() async {
         VALUES (:id)
         ;
         ''', values: {'id': id}, hint: id);
-        //print('$i: $id');
       }
     }, timeout: Timeout(Duration(seconds: 60)));
   });

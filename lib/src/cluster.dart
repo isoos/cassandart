@@ -158,7 +158,6 @@ class Cluster implements Client {
         bestPeer = peer;
       }
     }
-    print("Sending $hint to ${bestPeer.host.address}");
     return bestPeer;
   }
 
