@@ -50,9 +50,27 @@ decodeData(Type type, List<int> data) {
       return Uint8List.fromList(data);
     case RawType.inet:
       return decodeInet(data);
+    case RawType.set:
+      return decodeSet(type, data);
     default:
       throw UnimplementedError('Decode of ${type.rawType} not implemented.');
   }
+}
+
+Set decodeSet(Type setType, List<int> data) {
+  final bdr = ByteDataReader(endian: Endian.big);
+  bdr.add(data);
+  final setSize = bdr.readInt32();
+  final itemType = setType.parameters[0];
+  final set = Set();
+  for(int i = 0; i < setSize; ++i)
+  {
+    final itemSize = bdr.readInt32();
+    final itemBytes = bdr.read(itemSize);
+    final item = decodeData(itemType, itemBytes);
+    set.add(item);
+  }
+  return set;
 }
 
 InternetAddress decodeInet(List<int> data) {

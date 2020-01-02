@@ -337,6 +337,8 @@ Type _parseValueType(_BodyReader br) {
     case RawType.smallint:
     case RawType.tinyint:
       return Type(rawType);
+    case RawType.set:
+      return Type(rawType, [_parseValueType(br)]);
     default:
       throw UnimplementedError('Unhandled raw type: $rawType');
   }
