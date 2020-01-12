@@ -9,6 +9,8 @@ import 'package:buffer/buffer.dart';
 import 'package:meta/meta.dart';
 import 'package:page/page.dart';
 
+import 'murmur3_hash.dart';
+
 part 'cluster.dart';
 part 'frame_protocol.dart';
 part 'frames.dart';

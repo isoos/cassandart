@@ -5,6 +5,7 @@ class Cluster implements Client {
   final Authenticator _authenticator;
   final Consistency _consistency;
   final _peers = <_Peer>[];
+  final _peerTokens = <_Peer, Set<int>>{};
   final _random = Random.secure();
 
   Cluster._(this._authenticator, this._consistency);
@@ -18,7 +19,8 @@ class Cluster implements Client {
     for (String hostPort in hostPorts) {
       await client._connect(hostPort);
     }
-    client._collectPeers();
+    await client._collectPeers();
+    await client._loadPeerTokens();
     return client;
   }
 
@@ -35,9 +37,15 @@ class Cluster implements Client {
     Consistency consistency,
     /* List | Map */
     values,
+    String hint,
   }) {
     consistency ??= _consistency;
-    final peer = _selectPeer();
+    _Peer peer;
+    if (hint == null) {
+      peer = _selectPeer();
+    } else {
+      peer = _selectTokenPeer(hint);
+    }
     return peer._sendExecute(query, consistency, values);
   }
 
@@ -49,6 +57,7 @@ class Cluster implements Client {
     values,
     int pageSize,
     Uint8List pagingState,
+    String hint,
   }) {
     consistency ??= _consistency;
     final q = _Query(query, consistency, values, pageSize, pagingState);
@@ -59,7 +68,12 @@ class Cluster implements Client {
       pageSize: pageSize,
       pagingState: pagingState,
     );
-    final peer = _selectPeer();
+    _Peer peer;
+    if (hint == null) {
+      peer = _selectPeer();
+    } else {
+      peer = _selectTokenPeer(hint);
+    }
     return peer._sendQuery(this, q, body);
   }
 
@@ -96,11 +110,67 @@ class Cluster implements Client {
     await for (final row in peers.asStream()) {
       final newIP = row.values[0] as InternetAddress;
       final oldPeers = _peers.map((peer) => peer.host);
-      if (oldPeers.contains(newIP)) ;
+      if (oldPeers.contains(newIP)) continue;
       final newPeer =
           await _Peer.connect(newIP, 9042, authenticator: _authenticator);
       _peers.add(newPeer);
     }
+    _loadPeerTokens();
+  }
+
+  Future<ResultPage> _queryPeer(
+      _Peer peer,
+      String query, {
+        Consistency consistency,
+        /* List | Map */
+        values,
+        int pageSize,
+        Uint8List pagingState,
+      }) {
+    consistency ??= _consistency;
+    final q = _Query(query, consistency, values, pageSize, pagingState);
+    final body = buildQuery(
+      query: query,
+      consistency: consistency,
+      values: values,
+      pageSize: pageSize,
+      pagingState: pagingState,
+    );
+    return peer._sendQuery(this, q, body);
+  }
+
+  _loadPeerTokens() async {
+    for (final peer in _peers) {
+      final tokenPage = _queryPeer(peer, 'SELECT tokens FROM system.local');
+      final tokenFirstPage = await tokenPage.asStream().first;
+      final tokenData = tokenFirstPage.items[0].values[0];
+      final tokens =
+          (tokenData as Set).map((token) => int.parse(token as String)).toSet();
+      _peerTokens[peer] = tokens;
+    }
+  }
+
+  _Peer _selectTokenPeer(String hint) {
+    final hash = murmur3_hash(hint);
+    _Peer bestPeer;
+    int bestToken;
+    for(final peer in _peers) {
+      // Selects the smallest token which is larger than the hash.
+      final closeToken = _peerTokens[peer].reduce((a, b) {
+        if(a < hash) {
+          return b;
+        }
+        if(b < hash) {
+          return a;
+        }
+        return min(a, b);
+      });
+      if(bestToken == null || closeToken < bestToken) {
+        bestToken = closeToken;
+        bestPeer = peer;
+      }
+    }
+    return bestPeer;
   }
 }
 

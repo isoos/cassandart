@@ -39,5 +39,13 @@ void main() {
       final page = await client.query('SELECT cluster_name FROM system.local');
       expect(page.isLast, true);
     });
+
+    test('query index ranges', () async {
+      final page = await client.query('SELECT tokens FROM system.local');
+      expect(page.isLast, true);
+      final vals = page.items[0].values[0] as Set;
+      print(int.parse(vals.first as String)); // Different for different nodes
+    });
+
   });
 }
