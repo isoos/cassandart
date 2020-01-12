@@ -1,3 +1,10 @@
+## 0.2.0
+
+Better cluster handling:
+- Automatically connect to new peers.
+- Peer selection based on low latency connection.
+- Peer selection based on hint to connect to primary node directly (limited to String ids).
+
 ## 0.1.2
 
 - Updated to use `Uint8List`.
