@@ -44,7 +44,7 @@ void main() async {
           chars.add(33 + random.nextInt(94));
         }
         final id = String.fromCharCodes(chars);
-        await cluster.executeHint('''
+        await cluster.execute('''
         INSERT INTO cassandart_fill.table_fill
         (id)
         VALUES (:id)
