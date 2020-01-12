@@ -37,9 +37,15 @@ class Cluster implements Client {
     Consistency consistency,
     /* List | Map */
     values,
+    String hint,
   }) {
     consistency ??= _consistency;
-    final peer = _selectPeer();
+    _Peer peer;
+    if (hint == null) {
+      peer = _selectPeer();
+    } else {
+      peer = _selectTokenPeer(hint);
+    }
     return peer._sendExecute(query, consistency, values);
   }
 
@@ -51,6 +57,7 @@ class Cluster implements Client {
     values,
     int pageSize,
     Uint8List pagingState,
+    String hint,
   }) {
     consistency ??= _consistency;
     final q = _Query(query, consistency, values, pageSize, pagingState);
@@ -61,7 +68,12 @@ class Cluster implements Client {
       pageSize: pageSize,
       pagingState: pagingState,
     );
-    final peer = _selectPeer();
+    _Peer peer;
+    if (hint == null) {
+      peer = _selectPeer();
+    } else {
+      peer = _selectTokenPeer(hint);
+    }
     return peer._sendQuery(this, q, body);
   }
 
@@ -159,18 +171,6 @@ class Cluster implements Client {
       }
     }
     return bestPeer;
-  }
-
-  Future executeHint(
-      String query, {
-        Consistency consistency,
-        /* List | Map */
-        values,
-        String hint,
-      }) {
-    consistency ??= _consistency;
-    final peer = _selectTokenPeer(hint);
-    return peer._sendExecute(query, consistency, values);
   }
 }
 
