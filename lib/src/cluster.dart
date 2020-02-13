@@ -37,7 +37,7 @@ class Cluster implements Client {
     Consistency consistency,
     /* List | Map */
     values,
-    String hint,
+    dynamic hint,
   }) {
     consistency ??= _consistency;
     _Peer peer;
@@ -57,7 +57,7 @@ class Cluster implements Client {
     values,
     int pageSize,
     Uint8List pagingState,
-    String hint,
+    dynamic hint,
   }) {
     consistency ??= _consistency;
     final q = _Query(query, consistency, values, pageSize, pagingState);
@@ -150,8 +150,8 @@ class Cluster implements Client {
     }
   }
 
-  _Peer _selectTokenPeer(String hint) {
-    final hash = murmur3_hash(hint);
+  _Peer _selectTokenPeer(dynamic hint) {
+    final hash = murmur3Hash(hint);
     _Peer bestPeer;
     int bestToken;
     for(final peer in _peers) {
