@@ -34,8 +34,12 @@ decodeData(Type type, List<int> data) {
       return utf8.decode(data);
     case RawType.bigint:
     case RawType.counter:
-    case RawType.timestamp:
       return _byteData(data).getInt64(0, Endian.big);
+    case RawType.timestamp:
+      return DateTime.fromMillisecondsSinceEpoch(
+        _byteData(data).getInt64(0, Endian.big),
+        isUtc: true,
+      );
     case RawType.int:
       return _byteData(data).getInt32(0, Endian.big);
     case RawType.smallint:
@@ -62,9 +66,8 @@ Set decodeSet(Type setType, List<int> data) {
   bdr.add(data);
   final setSize = bdr.readInt32();
   final itemType = setType.parameters[0];
-  final set = Set();
-  for(int i = 0; i < setSize; ++i)
-  {
+  final set = <dynamic>{};
+  for (int i = 0; i < setSize; ++i) {
     final itemSize = bdr.readInt32();
     final itemBytes = bdr.read(itemSize);
     final item = decodeData(itemType, itemBytes);
@@ -119,6 +122,10 @@ Uint8List encodeData(value) {
     return encodeDouble(value);
   } else if (value is bool) {
     return value ? _boolTrue : _boolFalse;
+  } else if (value is DateTime) {
+    final data = ByteData(8);
+    data.setUint64(0, value.toUtc().millisecondsSinceEpoch, Endian.big);
+    return Uint8List.view(data.buffer);
   } else if (value is Uint8List) {
     return value;
   } else if (value is List<int>) {

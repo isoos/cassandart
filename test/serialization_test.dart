@@ -25,8 +25,10 @@ void main() {
     });
 
     test('timestamp', () {
-      encodeDecodeCore(RawType.timestamp, 123, 8);
-      encodeDecodeCore(RawType.timestamp, 2349257347856, 8);
+      encodeDecodeCore(RawType.timestamp,
+          DateTime.fromMillisecondsSinceEpoch(123, isUtc: true), 8);
+      encodeDecodeCore(RawType.timestamp,
+          DateTime.fromMillisecondsSinceEpoch(2349257347856, isUtc: true), 8);
     });
 
     test('counter', () {

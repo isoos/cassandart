@@ -1,3 +1,11 @@
+## 0.3.0
+
+- Peer-selection hint handles `List<String>` primary keys.
+
+**BREAKING CHANGES**:
+
+- `TIMESTAMP` is now serialized from/to `DateTime` (with UTC).
+
 ## 0.2.0
 
 Better cluster handling:
