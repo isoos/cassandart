@@ -26,6 +26,7 @@ abstract class Client {
     Consistency consistency,
     /* List<dynamic> | Map<String, dynamic> */
     values,
+    hint,
   });
 
   /// Execute data row [query] with the given parameters and return a page
@@ -37,6 +38,7 @@ abstract class Client {
     values,
     int pageSize,
     Uint8List pagingState,
+    hint,
   });
 }
 

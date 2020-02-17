@@ -41,6 +41,7 @@ class Cluster implements Client {
   }) {
     consistency ??= _consistency;
     _Peer peer;
+
     if (hint == null) {
       peer = _selectPeer();
     } else {
@@ -119,14 +120,14 @@ class Cluster implements Client {
   }
 
   Future<ResultPage> _queryPeer(
-      _Peer peer,
-      String query, {
-        Consistency consistency,
-        /* List | Map */
-        values,
-        int pageSize,
-        Uint8List pagingState,
-      }) {
+    _Peer peer,
+    String query, {
+    Consistency consistency,
+    /* List | Map */
+    values,
+    int pageSize,
+    Uint8List pagingState,
+  }) {
     consistency ??= _consistency;
     final q = _Query(query, consistency, values, pageSize, pagingState);
     final body = buildQuery(
@@ -154,18 +155,18 @@ class Cluster implements Client {
     final hash = murmur3Hash(hint);
     _Peer bestPeer;
     int bestToken;
-    for(final peer in _peers) {
+    for (final peer in _peers) {
       // Selects the smallest token which is larger than the hash.
       final closeToken = _peerTokens[peer].reduce((a, b) {
-        if(a < hash) {
+        if (a < hash) {
           return b;
         }
-        if(b < hash) {
+        if (b < hash) {
           return a;
         }
         return min(a, b);
       });
-      if(bestToken == null || closeToken < bestToken) {
+      if (bestToken == null || closeToken < bestToken) {
         bestToken = closeToken;
         bestPeer = peer;
       }
@@ -209,7 +210,8 @@ class _Peer {
   static Future<_Peer> connect(InternetAddress host, int port,
       {@required Authenticator authenticator}) async {
     final socket = await Socket.connect(host, port);
-    final frameHandler = FrameProtocol(FrameSink(socket), parseFrames(socket));
+    final frameHandler =
+        FrameProtocol(FrameSink(socket), parseInputStream(socket));
     await frameHandler.start(authenticator);
     final peer = _Peer._(host, port, frameHandler);
     peer._lastLatencies = Queue<double>();
@@ -222,17 +224,18 @@ class _Peer {
   }
 
   Future _sendExecute(String query, Consistency consistency, values) async {
-    return await _trackLatency(_protocol.execute(query, consistency, values));
+    return await _trackLatency(
+        () => _protocol.execute(query, consistency, values));
   }
 
   Future<ResultPage> _sendQuery(Client client, _Query q, Uint8List body) async {
-    return await _trackLatency(_protocol.query(client, q, body));
+    return await _trackLatency(() => _protocol.query(client, q, body));
   }
 
-  Future<R> _trackLatency<R>(Future<R> f) async {
+  Future<R> _trackLatency<R>(Future<R> fn()) async {
     final sw = Stopwatch();
     sw.start();
-    final result = await f;
+    final result = await fn();
     sw.stop();
     if (_lastLatencies.length >= _latencyMaxLength) {
       _lastLatencies.removeLast();

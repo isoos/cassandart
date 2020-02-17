@@ -6,6 +6,7 @@
 
 - `TIMESTAMP` is now serialized from/to `DateTime` (with UTC).
 - Refactored methods around frame parsing (internals).
+- `Client` also has the `hint` parameter (as `Cluster` has it).
 
 ## 0.2.0
 
