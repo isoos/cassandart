@@ -51,8 +51,8 @@ class Frame {
   int get streamId => header.streamId;
 }
 
-Stream<Frame> parseFrames(Stream<Uint8List> input) {
-  return _FrameStreamTransformer().parseFrames(input);
+Stream<Frame> parseInputStream(Stream<Uint8List> input) {
+  return _FrameStreamParser().parseInputStream(input);
 }
 
 class FrameSink implements Sink<Frame> {
@@ -74,22 +74,27 @@ class FrameSink implements Sink<Frame> {
   }
 }
 
-class _FrameStreamTransformer {
+class _FrameStreamParser {
   final _buffer = ByteDataReader();
   FrameHeader _header;
 
-  Stream<Frame> parseFrames(Stream<Uint8List> input) {
-    return input.transform(StreamTransformer.fromHandlers(
-      handleData: (Uint8List data, EventSink<Frame> sink) {
-        _buffer.add(data);
-        for (; _emitFrame(sink);) {}
-      },
-    ));
+  Stream<Frame> parseInputStream(Stream<Uint8List> input) async* {
+    await for (final data in input) {
+      _buffer.add(data);
+      for (;;) {
+        final frame = _tryParseFrame();
+        if (frame != null) {
+          yield frame;
+        } else {
+          break;
+        }
+      }
+    }
   }
 
-  bool _emitFrame(EventSink<Frame> sink) {
+  Frame _tryParseFrame() {
     if (_header == null && _buffer.remainingLength < 9) {
-      return false;
+      return null;
     }
     if (_header == null) {
       final headerBytes = _buffer.read(9);
@@ -123,15 +128,14 @@ class _FrameStreamTransformer {
     }
 
     if (_header != null && _buffer.remainingLength < _header.length) {
-      return false;
+      return null;
     }
 
     final Uint8List body =
         _header.length == 0 ? null : _buffer.read(_header.length);
     final frame = Frame(_header, body);
     _header = null;
-    sink.add(frame);
-    return true;
+    return frame;
   }
 }
 

@@ -5,6 +5,7 @@
 **BREAKING CHANGES**:
 
 - `TIMESTAMP` is now serialized from/to `DateTime` (with UTC).
+- Refactored methods around frame parsing (internals).
 
 ## 0.2.0
 

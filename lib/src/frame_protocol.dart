@@ -55,7 +55,7 @@ class FrameProtocol {
 
   Stream<Frame> get events => _eventController.stream;
 
-  Future<Frame> send(int opcode, Uint8List body) {
+  Future<Frame> send(int opcode, Uint8List body) async {
     if (_responseSubscription == null) {
       throw StateError('Connection is closed.');
     }
@@ -74,7 +74,7 @@ class FrameProtocol {
     final c = Completer<Frame>();
     _responseCompleters[frame.header.streamId] = c;
     _requestSink.add(frame);
-    return c.future;
+    return await c.future;
   }
 
   Future execute(String query, Consistency consistency, values) async {
@@ -262,7 +262,7 @@ enum RawType {
   tuple,
 }
 
-const _rawTypeMap = const <int, RawType>{
+const _rawTypeMap = <int, RawType>{
   0x0000: RawType.custom,
   0x0001: RawType.ascii,
   0x0002: RawType.bigint,
