@@ -113,12 +113,17 @@ class FrameProtocol {
     _throwIfError(rs);
     if (rs.opcode == Opcode.result) {
       final br = _BodyReader(rs.body);
+      List<String> warnings;
+      if (rs.header.hasWarning) {
+        warnings = br.readStringList();
+      }
+
       final int kind = br.parseInt();
       switch (kind) {
         case _ResultKind.void$:
           throw UnimplementedError('Result kind $kind not supported.');
         case _ResultKind.rows:
-          return _parseRowsBody(client, q, br);
+          return _parseRowsBody(client, q, br, warnings);
         case _ResultKind.setKeyspace:
           throw UnimplementedError('Result kind $kind not supported.');
         case _ResultKind.prepared:
@@ -126,7 +131,8 @@ class FrameProtocol {
         case _ResultKind.schemaChange:
           throw UnimplementedError('Result kind $kind not supported.');
         default:
-          throw UnimplementedError('Result kind $kind not implemented.');
+          final resultCode = '0x${kind.toRadixString(16).padLeft(4, '0')}';
+          throw UnimplementedError('Result kind $resultCode not implemented.');
       }
     }
     throw UnimplementedError('Unimplemented opcode handler: ${rs.opcode}');
@@ -153,6 +159,7 @@ class FrameProtocol {
       final completer = _responseCompleters.remove(frame.streamId);
       if (completer == null) {
         // TODO: log something is not right
+        print('No stream for ${frame.streamId}');
       }
       completer.complete(frame);
     } else {
@@ -181,7 +188,7 @@ class ErrorResponse implements Exception {
   }
 
   @override
-  String toString() => '[$code] $message';
+  String toString() => '[${code.toRadixString(16).padLeft(4, '0')}] $message';
 }
 
 abstract class _ResultKind {
@@ -192,7 +199,12 @@ abstract class _ResultKind {
   static const int schemaChange = 0x0005;
 }
 
-ResultPage _parseRowsBody(Client client, _Query q, _BodyReader br) {
+ResultPage _parseRowsBody(
+  Client client,
+  _Query q,
+  _BodyReader br,
+  List<String> warnings,
+) {
   final flags = br.parseInt();
   final hasGlobalTableSpec = flags & 0x0001 != 0;
   final hasMorePages = flags & 0x0002 != 0;
@@ -231,7 +243,15 @@ ResultPage _parseRowsBody(Client client, _Query q, _BodyReader br) {
     rows[i] = _Row(columns, values);
   }
 
-  return _RowsPage(client, q, columns, rows, !hasMorePages, pagingState);
+  return _RowsPage(
+    client,
+    q,
+    columns,
+    rows,
+    !hasMorePages,
+    pagingState,
+    warnings,
+  );
 }
 
 enum RawType {
@@ -381,6 +401,8 @@ abstract class ResultPage implements Page<Row> {
   List<Column> get columns;
   Uint8List get pagingState;
   List<Row> get rows => items;
+  List<String> get warnings;
+  bool get hasWarnings;
 }
 
 class _Query {
@@ -415,8 +437,11 @@ class _RowsPage extends Object with PageMixin<Row>, ResultPage {
   @override
   final Uint8List pagingState;
 
+  @override
+  final List<String> warnings;
+
   _RowsPage(this._client, this._query, this.columns, this.items, this.isLast,
-      this.pagingState);
+      this.pagingState, this.warnings);
 
   @override
   Future<ResultPage> next() async {
@@ -432,4 +457,7 @@ class _RowsPage extends Object with PageMixin<Row>, ResultPage {
 
   @override
   Future close() async {}
+
+  @override
+  bool get hasWarnings => warnings != null && warnings.isNotEmpty;
 }

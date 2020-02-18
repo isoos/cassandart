@@ -1,6 +1,7 @@
 ## 0.3.0
 
 - Peer-selection hint handles `List<String>` primary keys.
+- Warnings in query responses are now handled and included in `ResultPage`.
 
 **BREAKING CHANGES**:
 

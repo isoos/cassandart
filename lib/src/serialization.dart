@@ -210,4 +210,13 @@ class _BodyReader extends ByteDataReader {
     final buffer = read(length);
     return utf8.decode(buffer);
   }
+
+  List<String> readStringList() {
+    final result = <String>[];
+    final count = parseShort();
+    for (int i = 0; i < count; i++) {
+      result.add(parseShortString());
+    }
+    return result;
+  }
 }
