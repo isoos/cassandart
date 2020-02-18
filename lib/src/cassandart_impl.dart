@@ -26,6 +26,7 @@ abstract class Client {
     Consistency consistency,
     /* List<dynamic> | Map<String, dynamic> */
     values,
+    /* String | List<String> */
     hint,
   });
 
@@ -38,6 +39,7 @@ abstract class Client {
     values,
     int pageSize,
     Uint8List pagingState,
+    /* String | List<String> */
     hint,
   });
 }
