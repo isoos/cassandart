@@ -20,7 +20,6 @@ void main() {
       await client?.close();
     });
 
-
     test('query cluster name', () async {
       final page = await client.query('SELECT cluster_name FROM system.local');
       expect(page.isLast, isTrue);
@@ -46,6 +45,5 @@ void main() {
       final vals = page.items[0].values[0] as Set;
       print(int.parse(vals.first as String)); // Different for different nodes
     });
-
   });
 }

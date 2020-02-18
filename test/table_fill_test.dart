@@ -12,7 +12,6 @@ void main() async {
           authenticator: PasswordAuthenticator('cassandra', 'cassandra'));
     });
 
-
     test('Drop test', () async {
       await cluster.execute('''
         DROP TABLE cassandart_fill.table_fill ;
