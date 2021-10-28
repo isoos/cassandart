@@ -99,8 +99,8 @@ main() async {
 
   await Future.delayed(Duration(seconds: 1));
 
-  final rs = await hc.get(
-      Uri.parse('http://localhost:9200/foo/_search?pretty'));
+  final rs =
+      await hc.get(Uri.parse('http://localhost:9200/foo/_search?pretty'));
   print(rs.body);
 
   await client.close();

@@ -454,12 +454,12 @@ class _RowsPage extends Object with PageMixin<Row>, ResultPage {
 
   @override
   Future<ResultPage> next() => _client.query(
-      _query.query,
-      consistency: _query.consistency,
-      values: _query.values,
-      pageSize: _query.pageSize,
-      pagingState: pagingState,
-    );
+        _query.query,
+        consistency: _query.consistency,
+        values: _query.values,
+        pageSize: _query.pageSize,
+        pagingState: pagingState,
+      );
 
   @override
   Future<void> close() async {}

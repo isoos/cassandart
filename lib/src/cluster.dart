@@ -224,8 +224,8 @@ class _Peer {
     return await _protocol.close();
   }
 
-  Future<void> _sendExecute(String query,
-      Consistency? consistency, values) async {
+  Future<void> _sendExecute(
+      String query, Consistency? consistency, values) async {
     return await _trackLatency(
         () => _protocol.execute(query, consistency, values));
   }
