@@ -1,3 +1,8 @@
+## 0.4.0
+
+- Migrated to null safety. ([#12](https://github.com/isoos/cassandart/pull/12) by [jodinathan](https://github.com/jodinathan)).
+
+
 ## 0.3.0
 
 - Peer-selection hint handles `List<String>` primary keys.
