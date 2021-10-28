@@ -1,11 +1,11 @@
 part of 'cassandart_impl.dart';
 
 Uint8List buildQuery({
-  @required String query,
-  @required Consistency consistency,
-  @required values,
-  @required int pageSize,
-  @required Uint8List pagingState,
+  required String query,
+  required Consistency? consistency,
+  required values,
+  required int? pageSize,
+  required Uint8List? pagingState,
 }) {
   consistency ??= Consistency.quorum;
   final hasPageSize = pageSize != null && pageSize > 0;
@@ -31,13 +31,14 @@ Uint8List buildQuery({
 
   if (values != null && values is List) {
     bw.writeShort(values.length);
-    values.forEach((v) {
+
+    for (final v in values) {
       if (v == null) {
         bw.writeNormalInt(-1);
       } else {
         bw.writeBytes(encodeData(v));
       }
-    });
+    }
   } else if (values != null && values is Map) {
     bw.writeShort(values.length);
     values.forEach((k, v) {
@@ -52,7 +53,7 @@ Uint8List buildQuery({
     throw StateError('Unknown values: $values');
   }
   if (hasPageSize) {
-    bw.writeNormalInt(pageSize);
+    bw.writeNormalInt(pageSize!);
   }
   if (pagingState != null) {
     bw.writeBytes(pagingState);

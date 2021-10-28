@@ -6,7 +6,6 @@ import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:buffer/buffer.dart';
-import 'package:meta/meta.dart';
 import 'package:page/page.dart';
 
 import 'murmur3_hash.dart';
@@ -21,7 +20,7 @@ part 'serialization.dart';
 /// implementation may use a connection pool or just a single connection.
 abstract class Client {
   /// Execute [query] with the given parameters.
-  Future execute(
+  Future<void> execute(
     String query, {
     Consistency consistency,
     /* List<dynamic> | Map<String, dynamic> */
@@ -34,11 +33,11 @@ abstract class Client {
   /// object of the results rows (and further pagination support).
   Future<ResultPage> query(
     String query, {
-    Consistency consistency,
+    Consistency? consistency,
     /* List<dynamic> | Map<String, dynamic> */
     values,
-    int pageSize,
-    Uint8List pagingState,
+    int? pageSize,
+    Uint8List? pagingState,
     /* String | List<String> */
     hint,
   });

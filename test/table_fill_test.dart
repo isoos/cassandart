@@ -5,7 +5,7 @@ import 'package:test/test.dart';
 
 void main() async {
   group('Table fill with hints test', () {
-    Cluster cluster;
+    late final Cluster cluster;
 
     setUp(() async {
       cluster = await Cluster.connect(['remote-cassandra-server:9042'],

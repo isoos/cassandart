@@ -6,7 +6,7 @@ import 'package:cassandart/cassandart.dart';
 
 void main() {
   group('A group of tests', () {
-    Cluster client;
+    late final Cluster client;
 
     setUpAll(() async {
       client = await Cluster.connect(
@@ -16,7 +16,7 @@ void main() {
     });
 
     tearDownAll(() async {
-      await client?.close();
+      await client.close();
     });
 
     test('query cluster name', () async {

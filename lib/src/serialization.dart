@@ -65,7 +65,7 @@ Set decodeSet(Type setType, List<int> data) {
   final bdr = ByteDataReader(endian: Endian.big);
   bdr.add(data);
   final setSize = bdr.readInt32();
-  final itemType = setType.parameters[0];
+  final itemType = setType.parameters![0];
   final set = <dynamic>{};
   for (int i = 0; i < setSize; ++i) {
     final itemSize = bdr.readInt32();
@@ -196,7 +196,7 @@ class _BodyReader extends ByteDataReader {
     add(body);
   }
 
-  Uint8List parseBytes({bool copy = false}) {
+  Uint8List? parseBytes({bool copy = false}) {
     final length = parseInt();
     return length == -1 ? null : read(length);
   }

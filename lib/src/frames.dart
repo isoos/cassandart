@@ -12,15 +12,15 @@ class FrameHeader {
   final int length;
 
   FrameHeader({
-    @required this.isRequest,
-    @required this.protocolVersion,
-    @required this.isCompressed,
-    @required this.requiresTracing,
-    @required this.hasCustomPayload,
-    @required this.hasWarning,
-    @required this.streamId,
-    @required this.opcode,
-    @required this.length,
+    required this.isRequest,
+    required this.protocolVersion,
+    required this.isCompressed,
+    required this.requiresTracing,
+    required this.hasCustomPayload,
+    required this.hasWarning,
+    required this.streamId,
+    required this.opcode,
+    required this.length,
   });
 
   bool get isResponse => !isRequest;
@@ -62,9 +62,12 @@ class FrameSink implements Sink<Frame> {
 
   @override
   void add(Frame frame) {
+    final body = frame.body;
+
     _output.add(frame.header.toHeaderBytes());
-    if (frame.body != null && frame.body.isNotEmpty) {
-      _output.add(frame.body);
+
+    if (body.isNotEmpty) {
+      _output.add(body);
     }
   }
 
@@ -76,13 +79,14 @@ class FrameSink implements Sink<Frame> {
 
 class _FrameStreamParser {
   final _buffer = ByteDataReader();
-  FrameHeader _header;
+  FrameHeader? _header;
 
   Stream<Frame> parseInputStream(Stream<Uint8List> input) async* {
     await for (final data in input) {
       _buffer.add(data);
       for (;;) {
         final frame = _tryParseFrame();
+
         if (frame != null) {
           yield frame;
         } else {
@@ -92,11 +96,13 @@ class _FrameStreamParser {
     }
   }
 
-  Frame _tryParseFrame() {
-    if (_header == null && _buffer.remainingLength < 9) {
+  Frame? _tryParseFrame() {
+    var header = _header;
+
+    if (header == null && _buffer.remainingLength < 9) {
       return null;
     }
-    if (_header == null) {
+    if (header == null) {
       final headerBytes = _buffer.read(9);
       final version = headerBytes[0];
       final isResponse = (version & _responseMask) == _responseMask;
@@ -114,7 +120,7 @@ class _FrameStreamParser {
           (headerBytes[7] << 8) +
           headerBytes[8];
 
-      _header = FrameHeader(
+      header = FrameHeader(
         isRequest: !isResponse,
         protocolVersion: protocolVersion,
         isCompressed: isCompressed,
@@ -127,13 +133,13 @@ class _FrameStreamParser {
       );
     }
 
-    if (_header != null && _buffer.remainingLength < _header.length) {
+    if (_buffer.remainingLength < header.length) {
       return null;
     }
 
     final Uint8List body =
-        _header.length == 0 ? null : _buffer.read(_header.length);
-    final frame = Frame(_header, body);
+        header.length == 0 ? Uint8List(0) : _buffer.read(header.length);
+    final frame = Frame(header, body);
     _header = null;
     return frame;
   }

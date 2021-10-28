@@ -3,7 +3,7 @@ part of 'cassandart_impl.dart';
 /// The entry point for connecting to a cluster of Cassandra nodes.
 class Cluster implements Client {
   final Authenticator _authenticator;
-  final Consistency _consistency;
+  final Consistency? _consistency;
   final _peers = <_Peer>[];
   final _peerTokens = <_Peer, Set<int>>{};
   final _random = Random.secure();
@@ -12,8 +12,8 @@ class Cluster implements Client {
 
   static Future<Cluster> connect(
     List<String> hostPorts, {
-    Authenticator authenticator,
-    Consistency consistency,
+    required Authenticator authenticator,
+    Consistency? consistency,
   }) async {
     final client = Cluster._(authenticator, consistency);
     for (String hostPort in hostPorts) {
@@ -25,16 +25,16 @@ class Cluster implements Client {
   }
 
   /// Close all open connections in the cluster.
-  Future close() async {
+  Future<void> close() async {
     while (_peers.isNotEmpty) {
       await _peers.removeLast().close();
     }
   }
 
   @override
-  Future execute(
+  Future<void> execute(
     String query, {
-    Consistency consistency,
+    Consistency? consistency,
     /* List | Map */
     values,
     dynamic hint,
@@ -53,11 +53,11 @@ class Cluster implements Client {
   @override
   Future<ResultPage> query(
     String query, {
-    Consistency consistency,
+    Consistency? consistency,
     /* List | Map */
     values,
-    int pageSize,
-    Uint8List pagingState,
+    int? pageSize,
+    Uint8List? pagingState,
     dynamic hint,
   }) {
     consistency ??= _consistency;
@@ -78,7 +78,7 @@ class Cluster implements Client {
     return peer._sendQuery(this, q, body);
   }
 
-  Future _connect(String hostPort) async {
+  Future<void> _connect(String hostPort) async {
     final c = await _Peer.connectAdress(
       hostPort,
       authenticator: _authenticator,
@@ -122,11 +122,11 @@ class Cluster implements Client {
   Future<ResultPage> _queryPeer(
     _Peer peer,
     String query, {
-    Consistency consistency,
+    Consistency? consistency,
     /* List | Map */
     values,
-    int pageSize,
-    Uint8List pagingState,
+    int? pageSize,
+    Uint8List? pagingState,
   }) {
     consistency ??= _consistency;
     final q = _Query(query, consistency, values, pageSize, pagingState);
@@ -153,11 +153,12 @@ class Cluster implements Client {
 
   _Peer _selectTokenPeer(dynamic hint) {
     final hash = murmur3Hash(hint);
-    _Peer bestPeer;
-    int bestToken;
+    late _Peer bestPeer;
+    int? bestToken;
+
     for (final peer in _peers) {
       // Selects the smallest token which is larger than the hash.
-      final closeToken = _peerTokens[peer].reduce((a, b) {
+      final closeToken = _peerTokens[peer]!.reduce((a, b) {
         if (a < hash) {
           return b;
         }
@@ -185,7 +186,7 @@ class _Peer {
   final FrameProtocol _protocol;
 
   static const int _latencyMaxLength = 100;
-  Queue<double> _lastLatencies;
+  late final Queue<double> _lastLatencies;
 
   /// Average latency of the last [_latencyMaxLength] request.
   double get latency {
@@ -199,7 +200,7 @@ class _Peer {
 
   /// Connect to a server with a string address
   static Future<_Peer> connectAdress(String hostPort,
-      {@required Authenticator authenticator}) async {
+      {required Authenticator authenticator}) async {
     final host =
         (await InternetAddress.lookup(hostPort.split(':').first)).first;
     final port = int.parse(hostPort.split(':').last);
@@ -208,7 +209,7 @@ class _Peer {
 
   /// Connect to a server with ip/port address
   static Future<_Peer> connect(InternetAddress host, int port,
-      {@required Authenticator authenticator}) async {
+      {required Authenticator authenticator}) async {
     final socket = await Socket.connect(host, port);
     final frameHandler =
         FrameProtocol(FrameSink(socket), parseInputStream(socket));
@@ -223,7 +224,8 @@ class _Peer {
     return await _protocol.close();
   }
 
-  Future _sendExecute(String query, Consistency consistency, values) async {
+  Future<void> _sendExecute(String query,
+      Consistency? consistency, values) async {
     return await _trackLatency(
         () => _protocol.execute(query, consistency, values));
   }
@@ -232,7 +234,7 @@ class _Peer {
     return await _trackLatency(() => _protocol.query(client, q, body));
   }
 
-  Future<R> _trackLatency<R>(Future<R> fn()) async {
+  Future<R> _trackLatency<R>(Future<R> Function() fn) async {
     final sw = Stopwatch();
     sw.start();
     final result = await fn();
