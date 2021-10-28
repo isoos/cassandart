@@ -29,7 +29,7 @@ class FrameProtocol {
 
   FrameProtocol(this._requestSink, this._responseStream);
 
-  Future start(Authenticator authenticator) async {
+  Future<void> start(Authenticator authenticator) async {
     _responseSubscription = _responseStream.listen(_handleResponse);
     final rs = await send(Opcode.start,
         (_BodyWriter()..writeStringMap({'CQL_VERSION': '3.0.0'})).toBytes());
@@ -40,7 +40,7 @@ class FrameProtocol {
       final reader = _BodyReader(rs.body);
       final className = reader.parseShortString();
       if (className == 'org.apache.cassandra.auth.PasswordAuthenticator') {
-        final payload = await authenticator.respond(null);
+        final payload = await authenticator.respond(Uint8List(0));
         final body = _BodyWriter()..writeBytes(payload);
         final auth = await send(Opcode.authResponse, body.toBytes());
         _throwIfError(auth);
@@ -55,7 +55,7 @@ class FrameProtocol {
 
   Stream<Frame> get events => _eventController.stream;
 
-  Future<Frame> send(int opcode, Uint8List? body) async {
+  Future<Frame> send(int opcode, Uint8List body) async {
     if (_responseSubscription == null) {
       throw StateError('Connection is closed.');
     }
@@ -68,7 +68,7 @@ class FrameProtocol {
       hasWarning: false,
       streamId: _nextStreamId(),
       opcode: opcode,
-      length: body == null ? 0 : body.length,
+      length: body.length,
     );
     final frame = Frame(header, body);
     final c = Completer<Frame>();
@@ -77,7 +77,7 @@ class FrameProtocol {
     return await c.future;
   }
 
-  Future execute(String query, Consistency? consistency, values) async {
+  Future<void> execute(String query, Consistency? consistency, values) async {
     final body = buildQuery(
       query: query,
       consistency: consistency,
@@ -139,11 +139,11 @@ class FrameProtocol {
     throw UnimplementedError('Unimplemented opcode handler: ${rs.opcode}');
   }
 
-  Future close() async {
+  Future<void> close() async {
     _requestSink.close();
     await _responseSubscription!.cancel();
     _responseSubscription = null;
-    unawaited( _eventController.close());
+    await _eventController.close();
   }
 
   int _nextStreamId() {
@@ -183,7 +183,7 @@ class ErrorResponse implements Exception {
 
   ErrorResponse(this.code, this.message);
 
-  factory ErrorResponse.parse(Uint8List? body) {
+  factory ErrorResponse.parse(Uint8List body) {
     final br = _BodyReader(body);
     final code = br.parseInt();
     final message = br.parseShortString();
@@ -462,7 +462,7 @@ class _RowsPage extends Object with PageMixin<Row>, ResultPage {
     );
 
   @override
-  Future close() async {}
+  Future<void> close() async {}
 
   @override
   bool get hasWarnings => warnings?.isNotEmpty == true;

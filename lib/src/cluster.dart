@@ -25,14 +25,14 @@ class Cluster implements Client {
   }
 
   /// Close all open connections in the cluster.
-  Future close() async {
+  Future<void> close() async {
     while (_peers.isNotEmpty) {
       await _peers.removeLast().close();
     }
   }
 
   @override
-  Future execute(
+  Future<void> execute(
     String query, {
     Consistency? consistency,
     /* List | Map */
@@ -45,7 +45,7 @@ class Cluster implements Client {
     if (hint == null) {
       peer = _selectPeer();
     } else {
-      peer = _selectTokenPeer(hint)!;
+      peer = _selectTokenPeer(hint);
     }
     return peer._sendExecute(query, consistency, values);
   }
@@ -73,12 +73,12 @@ class Cluster implements Client {
     if (hint == null) {
       peer = _selectPeer();
     } else {
-      peer = _selectTokenPeer(hint)!;
+      peer = _selectTokenPeer(hint);
     }
     return peer._sendQuery(this, q, body);
   }
 
-  Future _connect(String hostPort) async {
+  Future<void> _connect(String hostPort) async {
     final c = await _Peer.connectAdress(
       hostPort,
       authenticator: _authenticator,
@@ -151,9 +151,9 @@ class Cluster implements Client {
     }
   }
 
-  _Peer? _selectTokenPeer(dynamic hint) {
+  _Peer _selectTokenPeer(dynamic hint) {
     final hash = murmur3Hash(hint);
-    _Peer? bestPeer;
+    late _Peer bestPeer;
     int? bestToken;
 
     for (final peer in _peers) {
@@ -224,7 +224,8 @@ class _Peer {
     return await _protocol.close();
   }
 
-  Future _sendExecute(String query, Consistency? consistency, values) async {
+  Future<void> _sendExecute(String query,
+      Consistency? consistency, values) async {
     return await _trackLatency(
         () => _protocol.execute(query, consistency, values));
   }

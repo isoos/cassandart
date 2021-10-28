@@ -20,7 +20,7 @@ part 'serialization.dart';
 /// implementation may use a connection pool or just a single connection.
 abstract class Client {
   /// Execute [query] with the given parameters.
-  Future execute(
+  Future<void> execute(
     String query, {
     Consistency consistency,
     /* List<dynamic> | Map<String, dynamic> */
@@ -61,7 +61,7 @@ enum Consistency {
 /// Provides response to authentication challenges.
 abstract class Authenticator {
   /// Responds to the authentication [challenge].
-  Future<Uint8List> respond(Uint8List? challenge);
+  Future<Uint8List> respond(Uint8List challenge);
 }
 
 /// Username and password based authenticator.
@@ -71,7 +71,7 @@ class PasswordAuthenticator implements Authenticator {
   PasswordAuthenticator(this.username, this.password);
 
   @override
-  Future<Uint8List> respond(Uint8List? challenge) async {
+  Future<Uint8List> respond(Uint8List challenge) async {
     final build = BytesBuilder(copy: false);
     build.addByte(0);
     build.add(utf8.encode(username));

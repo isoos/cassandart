@@ -192,8 +192,8 @@ class _BodyWriter extends ByteDataWriter {
 }
 
 class _BodyReader extends ByteDataReader {
-  _BodyReader(Uint8List? body) {
-    add(body!);
+  _BodyReader(Uint8List body) {
+    add(body);
   }
 
   Uint8List? parseBytes({bool copy = false}) {

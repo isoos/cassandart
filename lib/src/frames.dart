@@ -43,7 +43,7 @@ class FrameHeader {
 
 class Frame {
   final FrameHeader header;
-  final Uint8List? body;
+  final Uint8List body;
 
   Frame(this.header, this.body);
 
@@ -66,7 +66,7 @@ class FrameSink implements Sink<Frame> {
 
     _output.add(frame.header.toHeaderBytes());
 
-    if (body != null && body.isNotEmpty) {
+    if (body.isNotEmpty) {
       _output.add(body);
     }
   }
@@ -137,8 +137,8 @@ class _FrameStreamParser {
       return null;
     }
 
-    final Uint8List? body =
-        header.length == 0 ? null : _buffer.read(header.length);
+    final Uint8List body =
+        header.length == 0 ? Uint8List(0) : _buffer.read(header.length);
     final frame = Frame(header, body);
     _header = null;
     return frame;
