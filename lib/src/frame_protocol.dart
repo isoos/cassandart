@@ -25,7 +25,7 @@ class FrameProtocol {
   final Stream<Frame> _responseStream;
   final _responseCompleters = <int, Completer<Frame>>{};
   final _eventController = StreamController<Frame>();
-  StreamSubscription<Frame> _responseSubscription;
+  StreamSubscription<Frame>? _responseSubscription;
 
   FrameProtocol(this._requestSink, this._responseStream);
 
@@ -55,7 +55,7 @@ class FrameProtocol {
 
   Stream<Frame> get events => _eventController.stream;
 
-  Future<Frame> send(int opcode, Uint8List body) async {
+  Future<Frame> send(int opcode, Uint8List? body) async {
     if (_responseSubscription == null) {
       throw StateError('Connection is closed.');
     }
@@ -77,7 +77,7 @@ class FrameProtocol {
     return await c.future;
   }
 
-  Future execute(String query, Consistency consistency, values) async {
+  Future execute(String query, Consistency? consistency, values) async {
     final body = buildQuery(
       query: query,
       consistency: consistency,
@@ -113,7 +113,8 @@ class FrameProtocol {
     _throwIfError(rs);
     if (rs.opcode == Opcode.result) {
       final br = _BodyReader(rs.body);
-      List<String> warnings;
+      List<String>? warnings;
+
       if (rs.header.hasWarning) {
         warnings = br.readStringList();
       }
@@ -140,9 +141,9 @@ class FrameProtocol {
 
   Future close() async {
     _requestSink.close();
-    await _responseSubscription.cancel();
+    await _responseSubscription!.cancel();
     _responseSubscription = null;
-    await _eventController.close();
+    unawaited( _eventController.close());
   }
 
   int _nextStreamId() {
@@ -157,11 +158,13 @@ class FrameProtocol {
   void _handleResponse(Frame frame) {
     if (frame.streamId >= 0) {
       final completer = _responseCompleters.remove(frame.streamId);
+
       if (completer == null) {
         // TODO: log something is not right
         print('No stream for ${frame.streamId}');
+      } else {
+        completer.complete(frame);
       }
-      completer.complete(frame);
     } else {
       _eventController.add(frame);
     }
@@ -180,7 +183,7 @@ class ErrorResponse implements Exception {
 
   ErrorResponse(this.code, this.message);
 
-  factory ErrorResponse.parse(Uint8List body) {
+  factory ErrorResponse.parse(Uint8List? body) {
     final br = _BodyReader(body);
     final code = br.parseInt();
     final message = br.parseShortString();
@@ -203,44 +206,50 @@ ResultPage _parseRowsBody(
   Client client,
   _Query q,
   _BodyReader br,
-  List<String> warnings,
+  List<String>? warnings,
 ) {
   final flags = br.parseInt();
   final hasGlobalTableSpec = flags & 0x0001 != 0;
   final hasMorePages = flags & 0x0002 != 0;
   // final hasNoMetadata = flags & 0x0004 != 0;
   final columnsCount = br.parseInt();
-  Uint8List pagingState;
+  Uint8List? pagingState;
   if (hasMorePages) {
     pagingState = br.parseBytes(copy: true);
   }
-  String globalKeyspace;
-  String globalTable;
+  String? globalKeyspace;
+  String? globalTable;
+
   if (hasGlobalTableSpec) {
     globalKeyspace = br.parseShortString();
     globalTable = br.parseShortString();
   }
   final columns = <Column>[];
   for (int i = 0; i < columnsCount; i++) {
-    String keyspace = globalKeyspace;
-    String table = globalTable;
+    String? keyspace = globalKeyspace;
+    String? table = globalTable;
+
     if (!hasGlobalTableSpec) {
       keyspace = br.parseShortString();
       table = br.parseShortString();
     }
+
     final column = br.parseShortString();
     final valueType = _parseValueType(br);
-    columns.add(Column(keyspace, table, column, valueType));
+
+    columns.add(Column(keyspace!, table!, column, valueType));
   }
   final rowsCount = br.parseInt();
-  final rows = List<_Row>(rowsCount);
+  final rows = <_Row>[];
   for (int i = 0; i < rowsCount; i++) {
-    final values = List(columnsCount);
+    final values = List<Object?>.filled(columnsCount, null);
+
     for (int j = 0; j < columnsCount; j++) {
       final bytes = br.parseBytes();
       values[j] = bytes == null ? null : decodeData(columns[j].type, bytes);
     }
-    rows[i] = _Row(columns, values);
+
+    rows.add(_Row(columns, values));
   }
 
   return _RowsPage(
@@ -314,13 +323,13 @@ class Type {
   final RawType rawType;
 
   /// String description of custom type
-  final String customTypeName;
+  final String? customTypeName;
 
   /// Generic type parameters:
   /// List, Set: one value
   /// Map: two values: key, value
   /// Tuples: N values
-  final List<Type> parameters;
+  final List<Type>? parameters;
 
   Type._(this.rawType, this.customTypeName, this.parameters);
 
@@ -399,18 +408,18 @@ class _Row implements Row {
 
 abstract class ResultPage implements Page<Row> {
   List<Column> get columns;
-  Uint8List get pagingState;
+  Uint8List? get pagingState;
   List<Row> get rows => items;
-  List<String> get warnings;
+  List<String>? get warnings;
   bool get hasWarnings;
 }
 
 class _Query {
   final String query;
-  final Consistency consistency;
+  final Consistency? consistency;
   final dynamic values;
-  final int pageSize;
-  final Uint8List pagingState;
+  final int? pageSize;
+  final Uint8List? pagingState;
 
   _Query(
     this.query,
@@ -435,29 +444,26 @@ class _RowsPage extends Object with PageMixin<Row>, ResultPage {
   final bool isLast;
 
   @override
-  final Uint8List pagingState;
+  final Uint8List? pagingState;
 
   @override
-  final List<String> warnings;
+  final List<String>? warnings;
 
   _RowsPage(this._client, this._query, this.columns, this.items, this.isLast,
       this.pagingState, this.warnings);
 
   @override
-  Future<ResultPage> next() async {
-    if (isLast) return null;
-    return await _client.query(
+  Future<ResultPage> next() => _client.query(
       _query.query,
       consistency: _query.consistency,
       values: _query.values,
       pageSize: _query.pageSize,
       pagingState: pagingState,
     );
-  }
 
   @override
   Future close() async {}
 
   @override
-  bool get hasWarnings => warnings != null && warnings.isNotEmpty;
+  bool get hasWarnings => warnings?.isNotEmpty == true;
 }

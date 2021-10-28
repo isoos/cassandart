@@ -6,7 +6,6 @@ import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:buffer/buffer.dart';
-import 'package:meta/meta.dart';
 import 'package:page/page.dart';
 
 import 'murmur3_hash.dart';
@@ -34,11 +33,11 @@ abstract class Client {
   /// object of the results rows (and further pagination support).
   Future<ResultPage> query(
     String query, {
-    Consistency consistency,
+    Consistency? consistency,
     /* List<dynamic> | Map<String, dynamic> */
     values,
-    int pageSize,
-    Uint8List pagingState,
+    int? pageSize,
+    Uint8List? pagingState,
     /* String | List<String> */
     hint,
   });
@@ -62,7 +61,7 @@ enum Consistency {
 /// Provides response to authentication challenges.
 abstract class Authenticator {
   /// Responds to the authentication [challenge].
-  Future<Uint8List> respond(Uint8List challenge);
+  Future<Uint8List> respond(Uint8List? challenge);
 }
 
 /// Username and password based authenticator.
@@ -72,7 +71,7 @@ class PasswordAuthenticator implements Authenticator {
   PasswordAuthenticator(this.username, this.password);
 
   @override
-  Future<Uint8List> respond(Uint8List challenge) async {
+  Future<Uint8List> respond(Uint8List? challenge) async {
     final build = BytesBuilder(copy: false);
     build.addByte(0);
     build.add(utf8.encode(username));
