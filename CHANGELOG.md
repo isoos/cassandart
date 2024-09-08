@@ -1,7 +1,10 @@
+## 0.4.1
+
+- Updated dependencies.
+
 ## 0.4.0
 
 - Migrated to null safety. ([#12](https://github.com/isoos/cassandart/pull/12) by [jodinathan](https://github.com/jodinathan)).
-
 
 ## 0.3.0
 

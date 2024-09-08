@@ -17,13 +17,16 @@ void main() {
       expect(murmur3Hash('Neon'), -1824832692919016840);
 
       expect(
-          murmur3HashU8L(Uint8List.fromList([]
-            ..addAll(Uint8List.fromList([0x00, 0x05]))
-            ..addAll(utf8.encode('Roger'))
-            ..addAll(Uint8List.fromList([0]))
-            ..addAll(Uint8List.fromList([0x00, 0x04]))
-            ..addAll(utf8.encode('Neon'))
-            ..addAll(Uint8List.fromList([0])))),
+          murmur3HashU8L(Uint8List.fromList(<int>[
+            0x00,
+            0x05,
+            ...utf8.encode('Roger'),
+            0,
+            0,
+            0x04,
+            ...utf8.encode('Neon'),
+            0,
+          ])),
           7199240612451099039);
       expect(murmur3Hash(['Roger', 'Neon']), 7199240612451099039);
     });
