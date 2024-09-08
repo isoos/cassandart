@@ -430,7 +430,7 @@ class _Query {
   );
 }
 
-class _RowsPage extends Object with PageMixin<Row>, ResultPage {
+class _RowsPage extends ResultPage with PageMixin<Row> {
   final Client _client;
   final _Query _query;
 

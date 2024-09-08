@@ -53,7 +53,7 @@ Uint8List buildQuery({
     throw StateError('Unknown values: $values');
   }
   if (hasPageSize) {
-    bw.writeNormalInt(pageSize!);
+    bw.writeNormalInt(pageSize);
   }
   if (pagingState != null) {
     bw.writeBytes(pagingState);
