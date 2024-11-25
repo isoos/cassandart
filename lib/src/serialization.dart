@@ -52,6 +52,8 @@ decodeData(Type type, List<int> data) {
       return _byteData(data).getFloat64(0, Endian.big);
     case RawType.timeuuid:
       return Uint8List.fromList(data);
+    case RawType.uuid:
+      return Uint8List.fromList(data);
     case RawType.inet:
       return decodeInet(data);
     case RawType.set:
